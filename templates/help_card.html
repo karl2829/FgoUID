@@ -134,78 +134,27 @@ h1{font-size:54px;line-height:1.20;color:var(--text-1);margin-top:16px;letter-sp
   <div class="hd-l">
     <div class="hr-top">
       <div class="emwrap"><img class="em" src="../assets/emblem.png"></div>
-      <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>G S - C O R E&nbsp;&nbsp;·&nbsp;&nbsp;P L U G I N</b></div>
+      <div class="eyebrow">{{EYEBROW_LEFT}}&nbsp;&nbsp;／&nbsp;&nbsp;<b>{{EYEBROW_RIGHT}}</b></div>
     </div>
-    <h1>指令帮助</h1>
-    <div class="sub">FGO 查询插件　·　指令即查　·　数据来自 fgo-wiki 离线快照</div>
+    <h1>{{TITLE}}</h1>
+    <div class="sub">{{SUB}}</div>
   </div>
-  <div class="pill"><i></i>运行中</div>
+  <div class="pill"><i></i>{{PILL}}</div>
 </header>
 
 <div class="rule"></div>
-<div class="stats">
-  <div class="st"><i>从　者</i><b>{{SERVANTS}}</b></div>
-  <div class="st"><i>礼　装</i><b>{{CE}}</b></div>
-  <div class="st"><i>活　动</i><b>{{EVENTS}}</b></div>
-  <div class="st"><i>卡　池</i><b>{{GACHA}}</b></div>
-</div>
+<div class="stats">{{STATS}}</div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">查询指令</div><div class="line"></div><div class="n">C O M M A N D S</div></div>
-
-<div class="cmds">
-  <div class="row">
-    <div class="k">fgo从者 &lt;名称&gt;</div>
-    <div class="d">星级、职阶、攻击 / HP、属性、阵营、性别、特性、卡池</div>
-    <div class="e">例　<b>fgo从者 摩根</b></div>
-  </div>
-  <div class="row">
-    <div class="k">fgo礼装 &lt;名称&gt;</div>
-    <div class="d">星级、COST、类型、效果</div>
-    <div class="e">例　<b>fgo礼装 宝石翁</b></div>
-  </div>
-  <div class="row">
-    <div class="k">fgo活动 [关键词]</div>
-    <div class="d">未来 730 天内的活动；带关键词则在全部活动中搜索</div>
-    <div class="e">例　<b>fgo活动 特异点</b></div>
-  </div>
-  <div class="row">
-    <div class="k">fgo卡池 [关键词]</div>
-    <div class="d">近期卡池与 UP 从者；带关键词则按卡池名搜索</div>
-    <div class="e">例　<b>fgo卡池 摩根</b></div>
-  </div>
-</div>
-
-<div class="sec-h"><div class="bar"></div><div class="t">辅助指令</div><div class="line"></div><div class="n">U T I L I T Y</div></div>
-
-<div class="duo">
-  <div class="row">
-    <div class="k">fgo测试</div>
-    <div class="d">链路自检：能收到回复即插件正常</div>
-  </div>
-  <div class="row">
-    <div class="k">fgo帮助</div>
-    <div class="d">显示本图，随时查看指令与用法</div>
-  </div>
-</div>
-
-<div class="sec-h"><div class="bar"></div><div class="t">使用提示</div><div class="line"></div><div class="n">N O T E S</div></div>
-
-<div class="notes">
-  <div class="nt hl"><i>◆</i><div>共 <b>{{ALIASES}}</b> 条别名可直接用：<b>C呆</b> → 阿尔托莉雅·卡斯特、<b>宝石翁</b> → 万华镜、<b>黑杯</b> → 黑之圣杯</div></div>
-  <div class="nt"><i>◇</i><div>国服优先，无国服条目时回落日服；名称支持部分匹配，不必打全名</div></div>
-  <div class="nt"><i>◇</i><div>数据为离线快照（wiki @ {{COMMIT}}），查询不联网、无外部依赖</div></div>
-  <div class="nt"><i>◇</i><div>直接发送指令即可，无需 @ 机器人</div></div>
-</div>
-
+{{BODY}}
 <div class="orn"><i></i><b></b><i></i></div>
 <footer class="foot">
   <div class="l">
-    <div class="l1">数据来源　fgo-wiki 快照　·　Mooncell / Atlas Academy API</div>
-    <div class="l2">版权所有　TYPE-MOON / FGO PROJECT　·　非官方插件</div>
+    <div class="l1">{{FOOT_L1}}</div>
+    <div class="l2">{{FOOT_L2}}</div>
   </div>
   <div class="r">
-    <div>DESIGN BY MILA</div>
-    <div>DARK-CHALDEA FRAME ／ HELP v1</div>
+    <div>{{FOOT_R1}}</div>
+    <div>{{FOOT_R2}}</div>
   </div>
 </footer>
 </div></div></body></html>

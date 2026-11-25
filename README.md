@@ -40,25 +40,50 @@ python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki --freeze   # 发布快�
 
 ## 帮助卡图片
 
-`fgo帮助` 发送的是一张预渲染 PNG（`assets/help.png`），**运行时不需要 pytakumi**：
-图在开发机生成好随仓库分发，服务器只做 base64 发送。
+`fgo帮助` 在**安装插件的机器上自己渲染**：HTML/CSS → Skia 位图（pytakumi），不启浏览器。
+渲染一次后写入 `data/FGOUID/help_<hash>.png` 缓存（数据或模板变了 hash 才变），后续直接读盘。
 
-改版式或数据后重新生成：
+三级降级，任何一层挂了都不至于没图：
 
-```bash
-# 一次性：建渲染环境（pytakumi 0.1.5）
-uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi==0.1.5 pillow
-
-.render-venv/bin/python tools/render_help.py           # → assets/help.png（2200px 宽，约 400 KB）
-.render-venv/bin/python tools/render_help.py --dpr 1   # 预览用低清
+```
+服务器端渲染（pytakumi） → 仓库内预渲染 assets/help.png → 纯文字命令表
 ```
 
-- 版式：`templates/help_card.html`，沿用 fgo-wiki `card-render` 的暗色主题（DARK-CHALDEA FRAME）
-  与调色板，金框 / 四角 / 页脚与从者卡一致
-- 图里的数量、别名条数、wiki commit 从 `data/meta.json` 与 `data/fgo.db` **现读**，
-  数据刷新后重跑一次即可，不会和库里的数字对不上
-- `assets/emblem.png` 是从 fgo-wiki 素材库裁出的迦勒底徽记（去掉了下方文字），
-  已随仓库提交，脱离 wiki 后仍可单独重建
+依赖在 `pyproject.toml` 里声明（`pytakumi==0.1.5`），GsCore 的 `AutoInstallDep`
+（默认开启）会在加载插件时自动安装；没装成也只是降级，不影响其它命令。
+
+实测（2 核 2G 阿里云，容器内存上限 900M）：
+
+| 场景 | 耗时 | 进程峰值 | 容器内存 |
+|---|---|---|---|
+| 首次渲染 dpr=2 | 1.1 s | +82 MB | 452 MiB |
+| 缓存命中 | ~5 ms | — | — |
+| 并发 4 张 | 4.4 s | +250 MB | 577 MiB |
+
+并发用 `core/render.py` 的 `Semaphore(2)` 卡住——8 张并发能把容器顶到 840 MiB+，
+逼近 900 MiB 上限。
+
+### 三层结构（为将来换渲染后端留路）
+
+| 层 | 文件 | 职责 |
+|---|---|---|
+| 模型 | `core/help_card.py: help_model()` | 纯数据：文案、数字、区块结构 |
+| HTML 投影 | `core/help_card.py: help_html()` | 模型 → HTML 片段，配 `templates/help_card.html` 外框 |
+| 渲染 | `core/render.py` | pytakumi 封装：字体注入、图片内联、并发送流、裁边 |
+
+要改渲染引擎（例如换成 PIL），只需再写一个 `help_pil(model)`，模型层不动。
+`templates/help_card.html` 只保留外框与 CSS，正文区块全部由模型投影生成。
+
+### 版式素材
+
+- `templates/help_card.html`：沿用 fgo-wiki `card-render` 的暗色主题（DARK-CHALDEA FRAME）
+- `assets/emblem.png`：从 fgo-wiki 素材库裁出的迦勒底徽记（去掉了下方文字），已随仓库提交
+- `assets/help.png`：降级用的预渲染图，开发机生成：
+
+```bash
+uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi==0.1.5 pillow
+PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → assets/help.png
+```
 
 ## 结构
 
@@ -66,15 +91,17 @@ uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi
 FGOUID/
 ├── __init__.py            # 命令入口（GsCore SV）
 ├── core/db.py             # 只读查询层
+├── core/render.py         # 服务器端 pytakumi 渲染（并发/字体/裁边）
+├── core/help_card.py      # 帮助卡模型 → HTML 投影 + 缓存
 ├── data/fgo.db            # 索引快照
 ├── data/meta.json         # 来源版本
 ├── overrides/aliases.json # 别名覆盖
-├── assets/help.png        # fgo帮助 的卡片图（预渲染）
+├── assets/help.png        # 降级用预渲染图
 ├── assets/emblem.png      # 迦勒底徽记
-├── templates/help_card.html
+├── templates/help_card.html   # 外框 + CSS，正文由模型投影
 └── tools/
     ├── sync_from_wiki.py  # wiki → db
-    └── render_help.py     # 帮助卡渲染（仅开发机）
+    └── render_help.py     # 生成降级用 assets/help.png（仅开发机）
 ```
 
 ## License

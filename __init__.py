@@ -3,9 +3,12 @@
 from pathlib import Path
 
 from gsuid_core.bot import Bot
+from gsuid_core.logger import logger
 from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
+
+from .core.help_card import get_help_png
 
 from .core.db import (
     find_ce,
@@ -22,6 +25,7 @@ Plugins(name="FGOUID", alias=["fgo"])
 
 sv = SV("FGO查询")
 
+# 预渲染兜底图：pytakumi 不可用 / 渲染失败时发这个（构建期生成，随仓库分发）
 HELP_IMG = Path(__file__).resolve().parent / "assets" / "help.png"
 
 HELP_TEXT = (
@@ -42,9 +46,33 @@ async def fgo_ping(bot: Bot, ev: Event):
 
 @sv.on_fullmatch("fgo帮助", block=True)
 async def fgo_help(bot: Bot, ev: Event):
+    # 三级降级：服务器端渲染 → 仓库内预渲染图 → 纯文字
+    try:
+        png = await get_help_png()
+    except Exception as e:
+        logger.warning(f"[FGOUID] 帮助图渲染失败，降级：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
     if HELP_IMG.is_file():
         return await bot.send(MessageSegment.image(HELP_IMG))
     await bot.send(HELP_TEXT)
+
+
+# 让 FGOUID 出现在 core帮助 的「插件帮助一览」里
+try:
+    from PIL import Image
+
+    from gsuid_core.help.utils import register_help
+
+    _emblem = Path(__file__).resolve().parent / "assets" / "emblem.png"
+    register_help(
+        "FGOUID",
+        "fgo帮助",
+        Image.open(_emblem) if _emblem.is_file() else None,
+    )
+except Exception as e:  # 老版本 core 没有 register_help 时静默跳过
+    logger.debug(f"[FGOUID] register_help 跳过：{e}")
 
 
 @sv.on_command("fgo从者", block=True)

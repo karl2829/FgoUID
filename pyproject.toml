@@ -3,3 +3,7 @@ name = "FGOUID"
 version = "0.1.0"
 description = "FGO 查询插件 for GsCore"
 requires-python = ">=3.10"
+# GsCore 的 AutoInstallDep（默认开启）会读这里的依赖并在加载插件时自动安装
+dependencies = [
+    "pytakumi==0.1.5",
+]
