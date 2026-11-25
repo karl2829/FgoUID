@@ -20,6 +20,15 @@ HERE = Path(__file__).resolve().parent
 BUNDLED = HERE / "assets"
 
 SKILL_HOSTS = ("CN", "JP")
+
+# 模板里会出现、但素材库里没有的名字 → 退到最接近的现成图标
+ALIASES = {
+    "badge_0.png": "badge_1.png",          # 稀有度 0（安哥拉曼纽、E-玛丽等）
+    "beasteresh_gold.png": "beast_gold.png",
+    "beastiv_gold.png": "beast_gold.png",
+    "unknown_gold.png": "beast_gold.png",
+    "unknown_bronze.png": "beast_gold.png",
+}
 UA = {"User-Agent": "Mozilla/5.0 (compatible; FGOUID/0.1)"}
 CACHE_LIMIT_MB = int(os.environ.get("FGOUID_ART_CACHE_MB", "300"))
 
@@ -83,6 +92,9 @@ def ensure(name: str, data: dict) -> bytes | None:
     bundled = BUNDLED / name
     if bundled.is_file():
         return bundled.read_bytes()
+    alias = ALIASES.get(name)
+    if alias and (BUNDLED / alias).is_file():
+        return (BUNDLED / alias).read_bytes()
 
     cached = cache_dir() / name
     if cached.is_file():
