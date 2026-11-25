@@ -48,7 +48,7 @@ async def render_card(servant_id: str) -> bytes | None:
     if path.is_file():
         return path.read_bytes()
 
-    from card import build, fetch  # 延迟导入：pytakumi 不可用时不必加载
+    from ..card import build, fetch  # 延迟导入 + 相对导入（插件包名不固定）
 
     html = build.build_html(model)
     names = build.assets_used(html)
