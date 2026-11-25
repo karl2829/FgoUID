@@ -81,17 +81,29 @@ def collect_images(html: str, base: Path) -> Optional[dict[str, bytes]]:
     return out or None
 
 
-def _render_sync(html: str, base: Path, width: int, dpr: int, bleed: int, margin: int) -> bytes:
+def _render_sync(
+    html: str,
+    base: Path,
+    width: int,
+    dpr: int,
+    bleed: int,
+    margin: int,
+    extra_images: Optional[dict[str, bytes]] = None,
+) -> bytes:
     """线程内执行：渲染 + 裁掉外发光预留边。"""
     import pytakumi
     from PIL import Image
 
+    images = collect_images(html, base) or {}
+    if extra_images:
+        # 外部注入：立绘/羁绊礼装/技能图标不在 base 相对路径下时，用模板里的 src 当 key
+        images.update(extra_images)
     png = pytakumi.html_to_pic(
         html,
         width=int((width + 2 * bleed) * dpr),
         device_pixel_ratio=dpr,
         format="png",
-        images=collect_images(html, base),
+        images=images or None,
         fonts=load_fonts(),
     )
     if margin is None:
@@ -112,9 +124,12 @@ async def render_png(
     dpr: int = 2,
     bleed: int = 40,
     margin: int = 10,
+    extra_images: Optional[dict[str, bytes]] = None,
 ) -> bytes:
     """渲染 HTML 为 PNG bytes。并发受限（见模块 docstring）。"""
     if not available():
         raise RuntimeError("pytakumi 不可用")
     async with _sem:
-        return await asyncio.to_thread(_render_sync, html, base, width, dpr, bleed, margin)
+        return await asyncio.to_thread(
+            _render_sync, html, base, width, dpr, bleed, margin, extra_images
+        )

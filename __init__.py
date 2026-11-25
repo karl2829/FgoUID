@@ -8,6 +8,7 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
+from .core.card import render_card
 from .core.help_card import get_help_png
 
 from .core.db import (
@@ -83,6 +84,14 @@ async def fgo_servant(bot: Bot, ev: Event):
     row = find_servant(name)
     if row is None:
         return await bot.send(f"未找到从者：{name}")
+    # 有卡片数据就发主题卡图；没有/渲染失败则退回文字
+    try:
+        png = await render_card(row["id"])
+    except Exception as e:
+        logger.warning(f"[FGOUID] 从者卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
     await bot.send(format_servant(row))
 
 

@@ -55,6 +55,31 @@ def _lookup(con, table: str, entity_type: str, query: str, name_col: str = "name
     return None
 
 
+def find_servant_id(query: str) -> str | None:
+    row = find_servant(query)
+    return row["id"] if row else None
+
+
+def load_card_model(servant_id: str) -> dict | None:
+    """从 servant_cards 表取卡片模型（zlib 压缩的 JSON）。没有就返回 None。"""
+    import json
+    import zlib
+
+    con = _conn()
+    try:
+        row = con.execute(
+            "SELECT data FROM servant_cards WHERE id = ? ORDER BY CASE region WHEN 'CN' THEN 0 ELSE 1 END LIMIT 1",
+            (servant_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return json.loads(zlib.decompress(row[0]))
+    except Exception:
+        return None
+    finally:
+        con.close()
+
+
 def find_servant(query: str):
     con = _conn()
     try:
