@@ -6,7 +6,7 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 
 | 命令 | 说明 |
 |---|---|
-| `fgo从者 <名称>` | 从者信息（属性/阵营/攻防/特性/卡池），支持中文名、日文名、别名 |
+| `fgo从者 <名称>` | **从者卡图**（立绘 + 六维 + 宝具 + 技能数值）；无卡片数据/渲染失败时退回文字 |
 | `fgo礼装 <名称>` | 概念礼装（稀有度/COST/类型/效果） |
 | `fgo活动 [关键词]` | 未来活动，无则最近活动 |
 | `fgo卡池 [关键词]` | 近期卡池日历 / 按名称搜索 |
@@ -85,6 +85,28 @@ uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi
 PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → assets/help.png
 ```
 
+## 从者卡（带立绘）
+
+`fgo从者 摩根` 在服务器上现场渲染一张完整卡（立绘 / 六维 / 宝具五档 / 技能十格），
+不是纯文字也不是预生成图片。
+
+```
+fgo-wiki MD ──(tools/sync_cards.py，复用 wiki 的 parse_servant)──► servant_cards 表（zlib）
+                                                                      │
+card/templates + card/assets（随包 1MB） + Atlas 按需素材（缓存）◄──────┤
+                                                                      ▼
+                                                    core/card.py → core/render.py（pytakumi）
+```
+
+- **数据**：458 个国服从者，模型 JSON 平均 4.3KB，压缩后共 0.57MB（DB 1.6→2.4MB），同步耗时 8 秒
+- **素材**：随包 111 个小图标（职阶/星级/徽标/指令卡，800KB）；立绘（~500KB）、羁绊礼装（~600KB）、
+  技能图标（~20KB）按需从 Atlas 下载，缓存在 `data/FGOUID/art/`，默认 300MB 上限 + LRU 淘汰
+- **缓存**：渲染结果存 `data/FGOUID/cards/<id>_<hash>.png`，同一从者第二次是读盘
+- **实测**（2C2G）：首次查询 ~6s（含立绘下载 4s）；缓存命中 2.3s；单张 1400KB / 2200×5516
+
+> 开发期 `tools/sync_cards.py` 直接 import `fgo-wiki/card-render/build_data.py` 的 `parse_servant()`，
+> 也就是「出图脚本先写在 wiki」的那一份；插件定型后把解析器一起拷进来，改成包内相对导入即可。
+
 ## 结构
 
 ```
@@ -93,6 +115,14 @@ FGOUID/
 ├── core/db.py             # 只读查询层
 ├── core/render.py         # 服务器端 pytakumi 渲染（并发/字体/裁边）
 ├── core/help_card.py      # 帮助卡模型 → HTML 投影 + 缓存
+├── core/card.py           # 从者卡：模型 → 素材 → 渲染 → 缓存
+├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
+│   ├── build.py           #   数据模型 → HTML（模板填充）
+│   ├── fetch.py           #   立绘/羁绊礼装/技能图标按需下载 + 缓存
+│   ├── bondce.json        #   羁绊加成礼装反查（由 wiki 固化，107KB）
+│   ├── cardkit/           #   pytakumi 渲染内核 + 调色板 + 羁绊礼装匹配
+│   ├── templates/         #   servant_card_data.html
+│   └── assets/            #   随包小素材（800KB）
 ├── data/fgo.db            # 索引快照
 ├── data/meta.json         # 来源版本
 ├── overrides/aliases.json # 别名覆盖
