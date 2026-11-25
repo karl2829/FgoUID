@@ -1,0 +1,5 @@
+[project]
+name = "FGOUID"
+version = "0.1.0"
+description = "FGO 查询插件 for GsCore"
+requires-python = ">=3.10"
