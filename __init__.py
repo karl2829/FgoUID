@@ -1,7 +1,10 @@
-"""FGOUID — FGO 查询插件（GsCore 指令版，纯文字）"""
+"""FGOUID — FGO 查询插件（GsCore 指令版）"""
+
+from pathlib import Path
 
 from gsuid_core.bot import Bot
 from gsuid_core.models import Event
+from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core.db import (
@@ -19,6 +22,18 @@ Plugins(name="FGOUID", alias=["fgo"])
 
 sv = SV("FGO查询")
 
+HELP_IMG = Path(__file__).resolve().parent / "assets" / "help.png"
+
+HELP_TEXT = (
+    "【FGO 插件】\n"
+    "fgo从者 <名称> — 从者信息\n"
+    "fgo礼装 <名称> — 概念礼装\n"
+    "fgo活动 [关键词] — 活动列表/搜索\n"
+    "fgo卡池 [关键词] — 卡池日历/搜索\n"
+    "fgo测试 — 链路自检\n"
+    "fgo帮助 — 本帮助"
+)
+
 
 @sv.on_fullmatch("fgo测试", block=True)
 async def fgo_ping(bot: Bot, ev: Event):
@@ -27,15 +42,9 @@ async def fgo_ping(bot: Bot, ev: Event):
 
 @sv.on_fullmatch("fgo帮助", block=True)
 async def fgo_help(bot: Bot, ev: Event):
-    await bot.send(
-        "【FGO 插件】\n"
-        "fgo从者 <名称> — 从者信息\n"
-        "fgo礼装 <名称> — 概念礼装\n"
-        "fgo活动 [关键词] — 活动列表/搜索\n"
-        "fgo卡池 [关键词] — 卡池日历/搜索\n"
-        "fgo测试 — 链路自检\n"
-        "fgo帮助 — 本帮助"
-    )
+    if HELP_IMG.is_file():
+        return await bot.send(MessageSegment.image(HELP_IMG))
+    await bot.send(HELP_TEXT)
 
 
 @sv.on_command("fgo从者", block=True)
