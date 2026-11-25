@@ -116,8 +116,20 @@ def ensure(name: str, data: dict) -> bytes | None:
     return None
 
 
-def extra_images(data: dict, names: list[str]) -> dict[str, bytes]:
-    """把模板里 ``../assets/<name>`` 形式的引用解析成 {src: bytes}。"""
+def extra_images(data: dict, names: list[str], workers: int = 4) -> dict[str, bytes]:
+    """把模板里 ``../assets/<name>`` 形式的引用解析成 {src: bytes}。
+
+    冷启动要下 3~5 个文件（立绘/羁绊礼装/技能图标），串行要十几秒，
+    所以这里并发下载（I/O 密集，4 线程足够，也避免打爆小服务器）。
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    want = [n for n in names if not (BUNDLED / n).is_file()
+            and not ALIASES.get(n) and not (cache_dir() / n).is_file()]
+    if want:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            list(ex.map(lambda n: ensure(n, data), want))
+
     out: dict[str, bytes] = {}
     for name in names:
         if (BUNDLED / name).is_file():
