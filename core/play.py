@@ -100,6 +100,7 @@ def draw(user_id: str, day: str | None = None) -> dict | None:
             res = dict(row)
             res["is_new"] = False
             res["already"] = True
+            res["servant_class"] = _class_of(str(row["servant_id"]))
         else:
             pool = _pool()
             if not pool:
@@ -137,6 +138,17 @@ def draw(user_id: str, day: str | None = None) -> dict | None:
             "SELECT COUNT(*) FROM pulls WHERE user_id = ?", (uid,)
         ).fetchone()[0]
         return res
+    finally:
+        con.close()
+
+
+def _class_of(servant_id: str) -> str | None:
+    con = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    try:
+        row = con.execute(
+            "SELECT servant_class FROM servants WHERE id = ? LIMIT 1", (servant_id,)
+        ).fetchone()
+        return row[0] if row else None
     finally:
         con.close()
 
