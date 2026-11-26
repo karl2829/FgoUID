@@ -11,7 +11,7 @@ from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_cards
 from .core.ce_card import get_ce_png, load_details_for
-from .core.event_card import get_event_png
+from .core.event_card import get_event_png, prewarm_banners as prewarm_event_banners
 from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
@@ -326,9 +326,14 @@ async def fgo_prewarm(bot: Bot, ev: Event):
 async def _startup_prewarm() -> None:
     try:
         n = await prewarm_banners(12)
-        logger.debug(f"[FGOUID] 卡池横幅预热 {n} 张")
+        logger.info(f"[FGOUID] 卡池横幅预热 {n} 张")
     except Exception as e:
         logger.debug(f"[FGOUID] 卡池横幅预热跳过：{e}")
+    try:
+        m = await prewarm_event_banners(6)
+        logger.info(f"[FGOUID] 活动横幅预热 {m} 张")
+    except Exception as e:
+        logger.debug(f"[FGOUID] 活动横幅预热跳过：{e}")
 
 
 try:

@@ -162,6 +162,24 @@ def _cache_key(model: dict) -> str:
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
+async def prewarm_banners(limit: int = 6) -> int:
+    """启动时把默认列表里那几个活动的横幅先下下来（首图慢主要慢在 Atlas 的图上）。"""
+    from ..card import fetch as card_fetch
+    from .db import search_events
+
+    rows = search_events("", limit)
+    mapping = {}
+    for r in rows:
+        keys = r.keys()
+        banner = (r["banner"] if "banner" in keys else "") or ""
+        if banner:
+            mapping[_banner_name(banner)] = banner
+    if not mapping:
+        return 0
+    got = await asyncio.to_thread(card_fetch.remote_images, mapping)
+    return len(got)
+
+
 async def get_event_png(rows, keyword: str = "") -> bytes | None:
     model = event_model(rows, keyword)
     if not model["items"]:
