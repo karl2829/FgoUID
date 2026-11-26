@@ -59,20 +59,24 @@ def _skill_effect(eff: dict, compact: bool = False) -> str:
 
     if not values:                      # 恒定效果 / 无数值效果
         if compact:
-            if fixed:
-                return f'<div class="sk-e"><div class="sk-d"><span>{desc}</span><span class="vx">{fixed}</span></div></div>'
+            body = fixed if fixed else '<span class="empty">∅</span>'
+            cls = "p" if fixed else "p p-none"
             return (f'<div class="sk-e"><div class="sk-d"><span>{desc}</span>'
-                    f'<span class="vx vx-empty">∅</span></div></div>')
+                    f'<span class="vpill"><b class="{cls}">{body}</b></span></div></div>')
+
         body = fixed if fixed else '<span class="empty">∅</span>'
         cls = "vb1" if fixed else "vb1 vb-empty"
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
 
     if compact:
-        # 精简版：数值直接并进说明行（Lv.1 / Lv.6 / Lv.10），整行省掉一格数值表
-        picks = [values[i - 1] for i in sorted(BREAK_LEVELS) if i <= len(values)]
-        joined = ' / '.join(picks)
-        return (f'<div class="sk-e"><div class="sk-d"><span>{desc}</span>'
-                f'<span class="vx">{joined}</span></div></div>')
+        # 精简版：说明一行，右侧三个「药丸」——沿用宝具格的配色与描边，但并进同一行
+        levels = [i for i in sorted(BREAK_LEVELS) if i <= len(values)]
+        pills = "".join(
+            f'<b class="{"p p-edge" if i in (levels[0], levels[-1]) else "p"}">{values[i - 1]}</b>'
+            for i in levels
+        )
+        return f'<div class="sk-e"><div class="sk-d"><span>{desc}</span><span class="vpill">{pills}</span></div></div>'
+
 
     cells = []
     for i, v in enumerate(values, start=1):
