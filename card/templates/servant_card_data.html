@@ -13,8 +13,18 @@
                #A8862F 47%,#C9A227 63%,#F5E3AE 79%,#8A6E1A 93%,#C9A227 100%);
   --metal-foil:linear-gradient(180deg,#F8EDCB 0%,#E8C877 22%,#C9A227 42%,#8A6E1A 52%,
                #C9A227 64%,#F5E3AE 86%,#F8EDCB 100%);
-  --rule:linear-gradient(90deg,rgba(201,162,39,0) 0%,rgba(201,162,39,.55) 10%,
-         rgba(245,227,174,.78) 50%,rgba(201,162,39,.55) 90%,rgba(201,162,39,0) 100%);
+  --rule:linear-gradient(90deg,rgba(201,162,39,0) 0%,var(--g60) 10%,
+         rgba(245,227,174,.78) 50%,var(--g60) 90%,rgba(201,162,39,0) 100%);
+
+  /* 金色透明度阶梯：收敛散落的 rgba(201,162,39,.xx) */
+  --g06:var(--g06); --g10:var(--g10); --g12:var(--g12);
+  --g16:var(--g16); --g24:var(--g24); --g32:var(--g32);
+  --g48:var(--g48); --g60:var(--g60);
+  /* 暗底填充 */
+  --ink-34:var(--ink-34); --ink-42:var(--ink-42); --ink-50:var(--ink-50);
+  /* 间距阶梯：8 的倍数 */
+  --sp-1:8px; --sp-2:16px; --sp-3:24px; --sp-4:32px;
+  --pad-x:48px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
@@ -62,10 +72,10 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
     radial-gradient(122% 80% at 32% 38%,rgba(11,18,32,0) 46%,rgba(11,18,32,.52) 100%)}
 .art-edge{position:absolute;left:0;right:0;bottom:0;height:96px;z-index:2;pointer-events:none;
   background:linear-gradient(180deg,rgba(11,18,32,0) 0%,rgba(11,18,32,.55) 62%,rgba(11,18,32,.88) 100%);
-  border-bottom:1px solid rgba(201,162,39,.16)}
+  border-bottom:1px solid var(--g16)}
 .art-seam{position:absolute;right:0;top:0;bottom:0;width:1.5px;z-index:2;pointer-events:none;
-  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,rgba(201,162,39,.30) 26%,
-             rgba(245,227,174,.42) 52%,rgba(201,162,39,.26) 78%,rgba(201,162,39,0) 100%)}
+  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,var(--g32) 26%,
+             rgba(245,227,174,.42) 52%,var(--g24) 78%,rgba(201,162,39,0) 100%)}
 .hr-top{display:flex;align-items:center;gap:10px}
 .cl-icon{width:40px;height:40px;display:block;flex:0 0 40px;object-fit:contain;opacity:.97}
 /* 星级：CSS 画的五角星（原来的 badge 贴图又粗又糊） */
@@ -79,22 +89,22 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .origin b{color:var(--text-2);font-weight:400}
 .bond{display:flex;align-items:center;gap:13px;padding-top:20px}
 .bond .th{width:72px;height:72px;border-radius:9px;overflow:hidden;flex:0 0 72px;
-  box-shadow:0 0 0 1px rgba(201,162,39,.55), 0 0 0 3px rgba(11,18,32,.7), 0 4px 14px rgba(0,0,0,.5)}
+  box-shadow:0 0 0 1px var(--g60), 0 0 0 3px rgba(11,18,32,.7), 0 4px 14px rgba(0,0,0,.5)}
 .bond .th img{width:100%;height:100%;object-fit:cover;display:block}
 .bond .tx{display:flex;flex-direction:column;gap:3px}
 .bond .b1{font-size:16px;color:var(--gold)}
 .bond .b2{font-size:18px;color:var(--text-2)}
 .bond .b3{font-size:13.5px;color:#6C7A90;letter-spacing:.04em}
 
-.meta{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column;padding:36px 46px 26px 34px}
+.meta{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column;padding:36px var(--pad-x) 26px 34px}
 .get{position:absolute;top:34px;right:54px;display:flex;align-items:center;gap:7px;
   padding:6px 13px 7px;border-radius:7px;font-size:14px;letter-spacing:.14em;color:var(--gold-hi);
-  background:rgba(201,162,39,.10);border:1px solid rgba(201,162,39,.48);
+  background:var(--g10);border:1px solid var(--g48);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
 .get i{font-style:normal;width:5px;height:5px;border-radius:50%;background:var(--gold-hi);opacity:.9}
 .eyebrow{font-size:16px;color:var(--text-3);letter-spacing:.18em}
 .eyebrow b{color:var(--gold-mid);font-weight:400}
-.name{font-size:46px;line-height:1.28;color:var(--text-1);margin-top:12px;text-shadow:0 2px 8px rgba(0,0,0,.5)}
+.name{font-size:var(--pad-x);line-height:1.28;color:var(--text-1);margin-top:12px;text-shadow:0 2px 8px rgba(0,0,0,.5)}
 .name-jp{font-size:20px;color:var(--text-2);margin-top:2px}
 .attrs{font-size:18px;color:var(--text-3);margin-top:7px}
 .rule{height:1px;background:var(--rule);margin:15px 0 13px}
@@ -104,37 +114,37 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .stat .lb{font-size:15px;color:var(--text-3);letter-spacing:.10em}
 .stat .v{font-size:32px;color:var(--num);line-height:1.3;font-variant-numeric:tabular-nums}
 .stat .v small{font-size:13px;color:var(--text-3);margin-left:13px;font-weight:400}
-.cmd{display:flex;align-items:center;gap:9px;margin-top:13px}
+.cmd{display:flex;align-items:center;gap:var(--sp-1);margin-top:13px}
 .cmd .lb{font-size:15px;color:var(--text-3);margin-right:7px}
 .cmd img{width:40px;height:40px;border-radius:9px;display:block;
   box-shadow:0 0 0 1px rgba(255,255,255,.14), 0 3px 8px rgba(0,0,0,.45)}
 
 /* ---------- 头部补充：六维 / 职阶技能 / 画师声优 ---------- */
 .hex{display:flex;gap:0;margin-top:15px;border-radius:9px;overflow:hidden;
-  background:rgba(11,18,32,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  background:var(--ink-42);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .hex .hx{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 0 8px;
   border-left:1px solid rgba(255,255,255,.07)}
 .hex .hx:first-child{border-left:0}
 .hex .hx i{font-style:normal;font-size:12.5px;color:var(--text-3);letter-spacing:.06em}
 .hex .hx b{font-weight:400;font-size:19px;color:var(--gold-hi);letter-spacing:.02em}
 .cls{margin-top:13px;display:flex;flex-direction:column;gap:7px}
-.cls .cl{display:flex;align-items:baseline;gap:9px;font-size:15px}
+.cls .cl{display:flex;align-items:baseline;gap:var(--sp-1);font-size:15px}
 .cls .cl .kn{color:var(--gold);letter-spacing:.03em;flex:0 0 auto}
 .cls .cl .kd{color:var(--text-3)}
 .mini{display:flex;gap:26px;margin-top:11px;font-size:14px;color:var(--text-3);letter-spacing:.02em}
 .mini b{color:var(--text-2);font-weight:400}
 .credit{display:flex;gap:26px;margin-top:11px;font-size:15px;color:var(--text-3)}
 .credit b{color:var(--text-2);font-weight:400}
-.plate-row{flex:0 0 auto;display:flex;gap:9px;padding:13px 13px 26px 13px;border-radius:0 0 26px 0}
+.plate-row{flex:0 0 auto;display:flex;gap:var(--sp-1);padding:13px 13px 26px 13px;border-radius:0 0 26px 0}
 .plate{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;
-  padding:7px 4px 8px;border-radius:9px;background:linear-gradient(180deg,rgba(201,162,39,.14),rgba(201,162,39,.05));
+  padding:7px 4px 8px;border-radius:9px;background:linear-gradient(180deg,var(--g16),rgba(201,162,39,.05));
   border:1px solid rgba(201,162,39,.46);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
 .plate .lb{font-size:11.5px;color:rgba(201,162,39,.92);letter-spacing:.20em}
 .plate .v{font-size:16.5px;color:var(--text-1);letter-spacing:.02em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .col-seam{position:absolute;right:0;top:0;bottom:0;width:1.5px;z-index:4;pointer-events:none;
-  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,rgba(201,162,39,.30) 20%,
-    rgba(245,227,174,.42) 50%,rgba(201,162,39,.30) 80%,rgba(201,162,39,.10) 100%)}
+  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,var(--g32) 20%,
+    rgba(245,227,174,.42) 50%,var(--g32) 80%,var(--g10) 100%)}
 .art-no{position:absolute;right:20px;bottom:18px;z-index:3;padding:6px 12px 7px;border-radius:8px;
   font-size:15px;color:var(--gold);letter-spacing:.12em;font-variant-numeric:tabular-nums;
   background:rgba(16,27,45,.84);border:1px solid rgba(255,255,255,.12);
@@ -142,54 +152,54 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .stages{display:flex;align-items:center;gap:7px;margin-top:16px}
 .stages .lb{font-size:13px;color:var(--text-3);letter-spacing:.14em;margin-right:4px}
 .stages .fs{position:relative;width:42px;height:42px;border-radius:50%;overflow:hidden;flex:0 0 42px;
-  box-shadow:0 0 0 1px rgba(201,162,39,.42), 0 0 0 3px rgba(11,18,32,.55)}
+  box-shadow:0 0 0 1px var(--g48), 0 0 0 3px rgba(11,18,32,.55)}
 .stages .fs img{width:100%;height:100%;display:block}
 .stages .fs span{position:absolute;right:-1px;bottom:-1px;width:15px;height:15px;border-radius:50%;
-  background:#0E1727;border:1px solid rgba(201,162,39,.55);color:var(--gold-hi);
+  background:#0E1727;border:1px solid var(--g60);color:var(--gold-hi);
   font-size:10px;line-height:14px;text-align:center;font-variant-numeric:tabular-nums}
-.ce-fit{display:flex;align-items:center;gap:9px;margin-top:20px}
+.ce-fit{display:flex;align-items:center;gap:var(--sp-1);margin-top:20px}
 .ce-fit .k{font-size:12.5px;color:var(--gold-hi);letter-spacing:.16em;
   padding:3px 8px 4px;border-radius:5px;
-  border:1px solid rgba(201,162,39,.42);background:rgba(201,162,39,.10)}
+  border:1px solid var(--g48);background:var(--g10)}
 .ce-fit .v{font-size:15px;color:var(--text-1);letter-spacing:.03em}
 .traits-inline{margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;
   font-size:15px;line-height:1.5;color:var(--text-2)}
 .traits-inline span{padding:3px 0}
-.traits-inline i{font-style:normal;color:rgba(201,162,39,.55);margin:0 7px;font-size:13px}
+.traits-inline i{font-style:normal;color:var(--g60);margin:0 7px;font-size:13px}
 .traits-inline .g{color:var(--gold-hi);text-shadow:0 0 10px rgba(201,162,39,.28)}
 .traits-inline .r{color:var(--text-3)}
 
 /* ---------- 特性 ---------- */
-.traits{margin:20px 46px 0;display:flex;flex-direction:column;gap:10px}
+.traits{margin:var(--sp-2) var(--pad-x) 0;display:flex;flex-direction:column;gap:10px}
 .traits .th{display:flex;align-items:center;gap:11px}
 .traits .th .lb{font-size:15px;color:var(--gold-mid);letter-spacing:.18em}
-.traits .th .ln{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.45),rgba(201,162,39,0))}
+.traits .th .ln{flex:1;height:1px;background:linear-gradient(90deg,var(--g48),rgba(201,162,39,0))}
 .tgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .tg{height:38px;display:flex;align-items:center;justify-content:center;border-radius:8px;
   font-size:15px;color:var(--text-2);background:rgba(255,255,255,.045);
   border:1px solid rgba(255,255,255,.09);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.tg.key{color:var(--gold-hi);background:rgba(201,162,39,.12);border-color:rgba(201,162,39,.45)}
+.tg.key{color:var(--gold-hi);background:var(--g12);border-color:var(--g48)}
 
 /* ---------- 占位区（框架预览用） ---------- */
-.ph{margin:20px 46px 0;border-radius:16px;border:1.5px dashed rgba(201,162,39,.28);
+.ph{margin:var(--sp-2) var(--pad-x) 0;border-radius:16px;border:1.5px dashed rgba(201,162,39,.28);
   background:rgba(11,18,32,.30);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
 .ph .pt{font-size:22px;color:rgba(201,162,39,.75);letter-spacing:.24em}
 .ph .pd{font-size:14px;color:#5F6D82;letter-spacing:.06em}
 
 /* ---------- 区块标题 ---------- */
-.sec-h{display:flex;align-items:center;gap:14px;margin:26px 46px 0}
+.sec-h{display:flex;align-items:center;gap:var(--sp-2);margin:var(--sp-3) var(--pad-x) 0}
 .sec-h .bar{width:5px;height:24px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
-.sec-h .t{font-size:24px;color:var(--gold-hi);letter-spacing:.22em}
-.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.55),rgba(201,162,39,0))}
+.sec-h .t{font-size:22px;color:var(--gold-hi);letter-spacing:.22em}
+.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--g60),rgba(201,162,39,0))}
 .sec-h .n{font-size:14px;color:var(--text-3);letter-spacing:.18em}
 
 /* ---------- 技能区：整宽三行 ---------- */
-.skills{position:relative;z-index:1;margin:9px 46px 0;display:flex;flex-direction:column;gap:8px}
+.skills{position:relative;z-index:1;margin:9px var(--pad-x) 0;display:flex;flex-direction:column;gap:8px}
 .sk{border-radius:14px;border:1px solid rgba(255,255,255,.08);padding:10px 16px 11px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), 0 2px 14px rgba(0,0,0,.35)}
 .sk-h{display:flex;align-items:center;gap:11px}
-.sk-h img{width:46px;height:46px;border-radius:50%;display:block;flex:0 0 46px;
+.sk-h img{width:var(--pad-x);height:var(--pad-x);border-radius:50%;display:block;flex:0 0 var(--pad-x);
   box-shadow:0 0 0 2px rgba(11,18,32,.72), 0 0 0 3px rgba(255,255,255,.14), 0 4px 12px rgba(0,0,0,.5)}
 .sk-h .nm{font-size:19px;color:var(--text-1)}
 .sk-h .nm-jp{font-size:13px;color:#6C7A90;letter-spacing:.02em}
@@ -202,15 +212,15 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .sk-h .lg{font-size:13px;color:#7C8AA0;letter-spacing:.04em}
 .sk-h .lg b{color:var(--gold-mid);font-weight:400}
 .sk-e{margin-top:7px}
-.sk-d{display:flex;align-items:baseline;gap:9px;font-size:14.5px;color:var(--text-2)}
+.sk-d{display:flex;align-items:baseline;gap:var(--sp-1);font-size:14.5px;color:var(--text-2)}
 .sk-d .tag{font-size:13px;color:var(--gold-mid);letter-spacing:.06em}
 .v10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-top:5px}
 .v10 .vb{position:relative;height:31px;display:flex;align-items:center;justify-content:center;
-  padding:0 3px;border-radius:5px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.07);
+  padding:0 3px;border-radius:5px;background:var(--ink-50);border:1px solid rgba(255,255,255,.07);
   color:#C6BDA9;font-size:13px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.v10 .vb.mid{background:rgba(201,162,39,.10);border-color:rgba(201,162,39,.42);color:#DCC78F;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 8px rgba(201,162,39,.08)}
+.v10 .vb.mid{background:var(--g10);border-color:var(--g48);color:#DCC78F;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 8px var(--g10)}
 .v10 .vb .brk{position:absolute;left:22%;right:22%;bottom:0;height:2.5px;border-radius:2px;
   background:var(--gold-mid);box-shadow:0 0 6px rgba(201,162,39,.5)}
 .v10 .vb.mid .brk{background:var(--gold-hi)}
@@ -219,10 +229,10 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 
 /* ---------- 宝具区 ---------- */
 .np{position:relative;z-index:1;display:flex;flex-direction:column;
-  margin:16px 46px 0;border-radius:16px;border:1px solid rgba(255,255,255,.08);padding:13px 18px 15px;
+  margin:16px var(--pad-x) 0;border-radius:16px;border:1px solid rgba(255,255,255,.08);padding:13px 18px 15px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), 0 2px 14px rgba(0,0,0,.35)}
-.np-head{height:46px;display:flex;align-items:center;gap:11px;padding:0 14px;border-radius:10px;
+.np-head{height:var(--pad-x);display:flex;align-items:center;gap:11px;padding:0 14px;border-radius:10px;
   background:linear-gradient(180deg,#263B62,#1F3054);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.11), inset 0 -1px 0 rgba(0,0,0,.35)}
 .goldbar{width:5px;height:26px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
@@ -265,11 +275,11 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .eb-d .h{font-size:13px;color:var(--gold-mid)}
 .eb-v{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px}
 .vb5{height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;
-  background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.10);
+  background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
   color:#D8CDB6;font-size:16.5px;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.vb5.on{background:rgba(201,162,39,.16);border-color:rgba(201,162,39,.60);color:var(--gold-hi);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 0 14px rgba(201,162,39,.12)}
+.vb5.on{background:var(--g16);border-color:var(--g60);color:var(--gold-hi);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 0 14px var(--g12)}
 .vb5.none{color:#7C8AA0;font-size:14px;letter-spacing:.10em;border-style:dashed}
 
 .npbar{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;margin-top:16px;
@@ -283,13 +293,13 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .npbar .pct{font-size:20px;color:var(--num);font-variant-numeric:tabular-nums}
 
 .orn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:10px;
-  margin:16px 46px 12px}
-.orn i{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,0),rgba(201,162,39,.55))}
-.orn i:last-child{background:linear-gradient(90deg,rgba(201,162,39,.55),rgba(201,162,39,0))}
+  margin:16px var(--pad-x) 12px}
+.orn i{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,0),var(--g60))}
+.orn i:last-child{background:linear-gradient(90deg,var(--g60),rgba(201,162,39,0))}
 .orn b{width:7px;height:7px;transform:rotate(45deg);background:var(--gold);
-  box-shadow:0 0 0 3px #131E33, 0 0 0 4px rgba(201,162,39,.55), 0 0 12px rgba(227,195,107,.45)}
+  box-shadow:0 0 0 3px #131E33, 0 0 0 4px var(--g60), 0 0 12px rgba(227,195,107,.45)}
 
-.foot{position:relative;z-index:1;display:flex;justify-content:center;padding:12px 46px 20px}
+.foot{position:relative;z-index:1;display:flex;justify-content:center;padding:var(--sp-1) var(--pad-x) var(--sp-3)}
 .foot .l1{font-size:13.5px;color:#6C7A90;letter-spacing:.02em}
 
 /* ============ v2 版式（覆盖） ============ */
@@ -302,14 +312,14 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
   background:linear-gradient(180deg,rgba(8,13,24,0) 0%,rgba(8,13,24,.52) 34%,
     rgba(8,13,24,.86) 68%,rgba(8,13,24,.97) 100%)}
 .art-info img.st{width:62px;height:22px;object-fit:contain;display:block;flex:0 0 62px;margin:-4px 0}
-.art-info .vp{width:1px;height:12px;background:rgba(201,162,39,.40);flex:0 0 1px}
+.art-info .vp{width:1px;height:12px;background:var(--g48);flex:0 0 1px}
 .art-info .no{font-size:10.5px;letter-spacing:.06em;color:#C9A227;white-space:nowrap}
 .art-info .p{display:flex;align-items:baseline;gap:4px;min-width:0}
 .art-info .p em{font-style:normal;font-size:9px;color:#7E8CA2;letter-spacing:.06em;white-space:nowrap}
 .art-info .p b{font-size:11px;color:#DCE4EF;font-weight:400;white-space:nowrap}
 .col-seam{position:absolute;right:0;top:0;bottom:0;width:1.5px;z-index:6;pointer-events:none;
-  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,rgba(201,162,39,.26) 22%,
-    rgba(245,227,174,.40) 50%,rgba(201,162,39,.26) 78%,rgba(201,162,39,.06) 100%)}
+  background:linear-gradient(180deg,rgba(201,162,39,0) 0%,var(--g24) 22%,
+    rgba(245,227,174,.40) 50%,var(--g24) 78%,var(--g06) 100%)}
 
 .meta{flex:1 1 auto;min-width:0;position:relative;display:flex;flex-direction:column;
   padding:36px 44px 32px 34px}
@@ -321,10 +331,10 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .specs .sp b{font-weight:400;font-size:15.5px;color:var(--text-1);letter-spacing:.02em}
 .specs .sp b.gold{color:var(--gold-hi)}
 .hr2{height:1px;margin:14px 0 0;
-  background:linear-gradient(90deg,rgba(201,162,39,.34) 0%,rgba(201,162,39,.12) 60%,rgba(201,162,39,0) 100%)}
+  background:linear-gradient(90deg,var(--g32) 0%,var(--g12) 60%,rgba(201,162,39,0) 100%)}
 
 .nums{display:flex;align-items:flex-end;margin-top:16px}
-.nums .cell{padding-right:20px;margin-right:20px;border-right:1px solid rgba(201,162,39,.16)}
+.nums .cell{padding-right:20px;margin-right:20px;border-right:1px solid var(--g16)}
 .nums .cell:last-child{border-right:0;margin-right:0;padding-right:0}
 .nums .lb{font-size:10.5px;color:#7E8CA2;letter-spacing:.22em;margin-bottom:3px}
 .nums .v{font-size:26px;line-height:1.1;color:var(--gold-hi);font-variant-numeric:tabular-nums}
@@ -333,20 +343,20 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .nums .cards img{height:29px;width:auto;display:block}
 
 .hex{display:flex;margin-top:12px}
-.hex .hx{flex:1 1 0;text-align:center;border-right:1px solid rgba(201,162,39,.14)}
+.hex .hx{flex:1 1 0;text-align:center;border-right:1px solid var(--g16)}
 .hex .hx:last-child{border-right:0}
 .hex .hx i{display:block;font-style:normal;font-size:10.5px;color:#7E8CA2;letter-spacing:.10em}
 .hex .hx b{display:block;font-size:18px;font-weight:400;color:var(--text-1);margin-top:2px;letter-spacing:.02em}
 
 .traits-inline{margin-top:12px;font-size:12.8px;line-height:1.7;color:var(--text-2)}
 .traits-inline .more{color:#5A677D;margin-left:2px}
-.traits-inline i{font-style:normal;color:rgba(201,162,39,.50);margin:0 1px;font-size:12px}
+.traits-inline i{font-style:normal;color:var(--g48);margin:0 1px;font-size:12px}
 .traits-inline .g{color:var(--gold-hi)}
 
 .bond{margin-top:auto;display:flex;align-items:center;gap:13px;padding-top:13px;
-  border-top:1px solid rgba(201,162,39,.16)}
+  border-top:1px solid var(--g16)}
 .bond .th{flex:0 0 108px;width:108px;height:54px;border-radius:7px;overflow:hidden;
-  box-shadow:0 0 0 1px rgba(201,162,39,.45), 0 3px 10px rgba(0,0,0,.45)}
+  box-shadow:0 0 0 1px var(--g48), 0 3px 10px rgba(0,0,0,.45)}
 .bond .th img{width:108px;height:54px;object-fit:cover;object-position:50% 16%;display:block}
 .bond .tx{flex:1 1 auto;min-width:0}
 .bond .b2{font-size:18px;color:var(--text-1);line-height:1.25}
@@ -354,11 +364,11 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 
 .v1{display:flex;margin-top:7px}
 .vb1{flex:1 1 auto;height:31px;display:flex;align-items:center;justify-content:center;
-  border-radius:5px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.07);
+  border-radius:5px;background:var(--ink-50);border:1px solid rgba(255,255,255,.07);
   color:#C6BDA9;font-size:13px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .vb5.vb5-fix{grid-column:1 / -1}
-.vb-empty{background:rgba(11,18,32,.34);border-color:rgba(255,255,255,.10);border-style:dashed;box-shadow:none}
+.vb-empty{background:var(--ink-34);border-color:rgba(255,255,255,.10);border-style:dashed;box-shadow:none}
 .vb-empty .empty{color:#8794AA;font-size:15px;letter-spacing:0;line-height:1;
   display:flex;align-items:center;justify-content:center}
 </style></head><body>
