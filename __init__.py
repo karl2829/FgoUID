@@ -23,6 +23,11 @@ from .core.settings import (
     put,
     scope_of,
 )
+
+
+def lang_of(ev: Event) -> str:
+    """当前会话的显示语言（zh / jp）。"""
+    return str(all_of(scope_of(ev)).get("lang") or "zh")
 from .core.prewarm import (
     DEFAULT_BATCH,
     MAX_BATCH,
@@ -120,7 +125,7 @@ async def fgo_servant(bot: Bot, ev: Event):
         return await bot.send(format_servant(row))
     # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字
     try:
-        pngs = await render_cards(row["id"])
+        pngs = await render_cards(row["id"], lang=lang_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 从者卡渲染失败，降级文字：{e}")
         pngs = []
@@ -140,7 +145,8 @@ async def fgo_ce(bot: Bot, ev: Event):
     if not image_on(ev):
         return await bot.send(format_ce(row))
     try:
-        png = await asyncio.wait_for(get_ce_png(dict(row), load_details_for(row)), timeout=45)
+        png = await asyncio.wait_for(
+            get_ce_png(dict(row), load_details_for(row), lang_of(ev)), timeout=45)
     except asyncio.TimeoutError:
         logger.info("[FGOUID] 礼装卡首次渲染超时，先发文字版")
         return await bot.send(format_ce(row) + "\n（礼装卡首次生成要下图，稍后再发一次就有图了）")
@@ -186,7 +192,7 @@ async def fgo_waifu(bot: Bot, ev: Event):
     if not image_on(ev):
         return await bot.send(format_waifu(pick))
     try:
-        pngs = await render_cards(pick["id"])
+        pngs = await render_cards(pick["id"], lang=lang_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 今日老婆卡渲染失败，降级文字：{e}")
         pngs = []
@@ -208,7 +214,7 @@ async def fgo_daily_draw(bot: Bot, ev: Event):
     if not image_on(ev):
         return
     try:
-        pngs = await render_cards(res["servant_id"])
+        pngs = await render_cards(res["servant_id"], lang=lang_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 每日一抽卡图渲染失败，只发文字：{e}")
         pngs = []
@@ -243,10 +249,11 @@ async def fgo_set_lang(bot: Bot, ev: Event):
     cur = all_of(scope_of(ev))
     if want == cur.get("lang"):
         return await bot.send(f"语言已经是{'中文' if want == 'zh' else '日文'}了")
-    if want == "jp":
-        return await bot.send("日文名数据已经有了（模型里的 name_jp），但卡片版式还没做完 —— 施工中")
     put(scope_of(ev), "lang", want)
-    await bot.send("语言已切换为中文 ✅")
+    if want == "jp":
+        await bot.send("语言已切换为日文 ✅ 从者卡/礼装卡的名称改成日文主显、中文小字（帮助卡与卡池仍中文）")
+    else:
+        await bot.send("语言已切换为中文 ✅")
 
 
 @sv.on_fullmatch(("fgo图鉴", "从者图鉴"), block=True)

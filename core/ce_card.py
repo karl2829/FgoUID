@@ -76,14 +76,18 @@ def art_name(ce_id: str) -> str:
     return f"ce_art_{ce_id}.png"
 
 
-def ce_model(ce: dict, detail: dict | None) -> dict:
+def ce_model(ce: dict, detail: dict | None, lang: str = "zh") -> dict:
     detail = detail or {}
     rarity = int(ce.get("rarity") or 0)
     effects = detail.get("effects") or []
+    name = (ce.get("name") or "").strip()
+    name_jp = (detail.get("name_jp") or "").strip()
+    if lang == "jp" and name_jp:
+        name, name_jp = name_jp, name
     return {
         "id": str(ce.get("id")),
-        "name": (ce.get("name") or "").strip(),
-        "name_jp": (detail.get("name_jp") or "").strip(),
+        "name": name,
+        "name_jp": name_jp,
         "rarity": rarity,
         "cost": ce.get("cost"),
         "type": CE_TYPE_LABEL.get(ce.get("ce_type") or "", ce.get("ce_type") or ""),
@@ -171,11 +175,11 @@ def _cache_key(model: dict) -> str:
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
-async def get_ce_png(ce: dict, detail: dict | None) -> bytes | None:
+async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh") -> bytes | None:
     """渲染礼装卡；没有卡面图或 pytakumi 不可用时返回 None（调用方降级文字）。"""
     if not detail or not detail.get("art_url"):
         return None
-    model = ce_model(ce, detail)
+    model = ce_model(ce, detail, lang)
     key = _cache_key(model)
     path = store.data_dir() / f"ce_{model['id']}_{key}.png"
     if path.is_file():

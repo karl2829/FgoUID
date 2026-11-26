@@ -22,6 +22,24 @@ BREAK_LEVELS = {1, 6, 10}   # 技能本断点：Lv.1 / Lv.6 / Lv.10
 HIGHLIGHT_LEVEL = 6         # 高亮常驻断点
 
 
+def _strip_rank(name_jp: str, rank: str = "") -> str:
+    """日文技能名末尾一般带阶级（「カリスマ B」），卡面已有 RANK 栏，去掉避免重复。"""
+    name_jp = (name_jp or "").strip()
+    if not name_jp:
+        return ""
+    if rank and name_jp.endswith(" " + rank):
+        return name_jp[: -len(rank) - 1].strip()
+    m = re.match(r"^(.*?)\s+([A-ZＡ-Ｚ][A-ZＡ-Ｚ＋+\-]{0,3})$", name_jp)
+    return m.group(1).strip() if m else name_jp
+
+
+def _pick_names(cn: str, jp: str, rank: str = "", lang: str = "zh") -> tuple[str, str]:
+    """按语言决定「主名称 + 副名称」：中文界面主中文、副日文；日文界面反过来。"""
+    cn, jp = (cn or "").strip(), (jp or "").strip()
+    if lang == "jp" and jp:
+        return _strip_rank(jp, rank), (cn if cn and cn != jp else "")
+    return cn, (jp if jp and jp != cn else "")
+
 def _skill_effect(eff: dict) -> str:
     desc, values, fixed = eff.get("desc", ""), eff.get("values"), eff.get("fixed")
     head = f'<div class="sk-d"><span>{desc}</span>'
@@ -42,13 +60,14 @@ def _skill_effect(eff: dict) -> str:
     return f'<div class="sk-e">{head}<div class="v10">{"".join(cells)}</div></div>'
 
 
-def _skill(sk: dict) -> str:
+def _skill(sk: dict, lang: str = "zh") -> str:
     effects = "".join(_skill_effect(e) for e in sk["effects"])
-    jp = f'<span class="nm-jp">{sk["name_jp"]}</span>' if sk.get("name_jp") else ""
+    name, name_jp = _pick_names(sk.get("name", ""), sk.get("name_jp", ""), sk.get("rank", ""), lang)
+    jp = f'<span class="nm-jp">{name_jp}</span>' if name_jp else ""
     return f'''  <div class="sk">
     <div class="sk-h">
       <img src="../assets/{sk["icon"]}">
-      <span class="nm">{sk["name"]}</span>{jp}<span class="rk">{sk["rank"]}</span>
+      <span class="nm">{name}</span>{jp}<span class="rk">{sk["rank"]}</span>
       <span class="sep"></span>
       <span class="sp"></span>
       <span class="cd">充能 <b>{sk["cd"]}</b></span>
@@ -57,8 +76,8 @@ def _skill(sk: dict) -> str:
   </div>'''
 
 
-def build_skills(skills: list[dict]) -> str:
-    body = "\n".join(_skill(s) for s in skills)
+def build_skills(skills: list[dict], lang: str = "zh") -> str:
+    body = "\n".join(_skill(s, lang) for s in skills)
     return f'''<div class="sec-h"><span class="bar"></span><span class="t">持有技能</span>
   <span class="line"></span><span class="n">S K I L L S</span></div>
 
@@ -82,7 +101,9 @@ def _np_effect(eff: dict) -> str:
   </div>'''
 
 
-def build_np(np: dict, label: str = "") -> str:
+def build_np(np: dict, label: str = "", lang: str = "zh") -> str:
+    name, _ = _pick_names(np.get("name", ""), np.get("name_jp", ""), "", lang)
+    sub = np.get("name", "") if lang == "jp" and np.get("name_jp") else np.get("sub", "")
     chips = "".join(f'<div class="chip {c}">{t}</div>' for t, c in np["chips"])
     effects = "\n".join(_np_effect(e) for e in np["effects"])
     note = f'<span class="rk-note">{np["note"]}</span>' if np.get("note") else ""
@@ -99,8 +120,8 @@ def build_np(np: dict, label: str = "") -> str:
   </div>
   <div class="name-row">
     <div>
-      <div class="np-name">{np["name"]}</div>
-      <div class="np-sub">{np["sub"]}</div>
+      <div class="np-name">{name}</div>
+      <div class="np-sub">{sub}</div>
     </div>
     <div class="rank"><span class="rk-lb">R A N K</span><span class="rk-v">{np["rank"]}</span>{note}</div>
   </div>
@@ -150,21 +171,22 @@ def assets_used(html: str) -> list[str]:
     return sorted(set(re.findall(r'src="\.\./assets/([^"]+)"', html)))
 
 
-def build_html(data: dict, hero_only: bool = False) -> str:
+def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
     """把从者数据模型填进模板，返回完整 HTML（不落盘、不渲染）。"""
     html = TPL.read_text(encoding="utf-8")
     if hero_only:                       # 只出从者区模版：技能/宝具留空
         html = html.replace("<!--SKILLS-->", "").replace("<!--NP-->", "")
     else:
-        html = html.replace("<!--SKILLS-->", build_skills(data["skills"]))
+        html = html.replace("<!--SKILLS-->", build_skills(data["skills"], lang))
         nps = (data.get("np") or {}).get("modules") or ([data["np"]] if data.get("np") else [])
         multi = len(nps) > 1 or data.get("_module_total", 0) > 1   # 插件侧按模组拆图时会带 _module_*
         html = html.replace("<!--NP-->", "\n".join(
-            build_np(n, label=(data.get("_form_label") or
+            build_np(n, lang=lang, label=(data.get("_form_label") or
                                (f"模组 {n.get('module', data.get('_module_no', i + 1))}" if multi else "")))
             for i, n in enumerate(nps)))
 
-    if not data.get("name_jp") or data.get("name_jp") == data.get("name"):   # 伪日文名不显示
+    _name, _name_jp = _pick_names(data.get("name", ""), data.get("name_jp", ""), "", lang)
+    if not _name_jp:                    # 没有副名称就整行去掉
         html = html.replace('    <div class="name-jp">{{NAME_JP}}</div>', "")
 
     # ---- 头部字段全部来自 data（build_data.py 从 fgo-wiki MD 解析）----
@@ -192,8 +214,8 @@ def build_html(data: dict, hero_only: bool = False) -> str:
         "NPG": data.get("npgain", "—"),
         "RNUM": str(rarity),
         "NO": str(data.get("no", "")),
-        "NAME": data.get("name", ""),
-        "NAME_JP": "" if data.get("name_jp", "") == data.get("name", "") else data.get("name_jp", ""),
+        "NAME": _name,
+        "NAME_JP": _name_jp,
         "CLASS_EN": klass.upper(),
         "CLASS_ICON": "%s_%s.png" % (klass, "gold" if rarity >= 4 else ("silver" if rarity == 3 else "bronze")) if klass else "saber_gold.png",
         "ATK": f'{int(data["atk"]):,}' if isinstance(data.get("atk"), int) else data.get("atk", ""),

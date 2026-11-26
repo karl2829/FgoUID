@@ -30,8 +30,8 @@ def cache_dir() -> Path:
         return p
 
 
-def _card_cache_key(model: dict) -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True)
+def _card_cache_key(model: dict, lang: str = "zh") -> str:
+    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + "|" + lang
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
@@ -77,8 +77,8 @@ def split_modules(model: dict) -> list[dict]:
     return out
 
 
-async def render_cards(servant_id: str) -> list[bytes]:
-    """渲染某从者的卡图（多模组时返回多张）。"""
+async def render_cards(servant_id: str, lang: str = "zh") -> list[bytes]:
+    """渲染某从者的卡图（多模组时返回多张）。lang=jp 时名称用日文名主显。"""
     if not render.available():
         return []
     model = load_card_model(servant_id)
@@ -87,23 +87,24 @@ async def render_cards(servant_id: str) -> list[bytes]:
 
     variants = split_modules(model)
     if len(variants) == 1:
-        one = await render_card_from_model(servant_id, model)
+        one = await render_card_from_model(servant_id, model, lang=lang)
         return [one] if one else []
-    return [p for p in [await render_card_from_model(servant_id, v, suffix=f"_m{v['_module_no']}")
+    return [p for p in [await render_card_from_model(servant_id, v, suffix=f"_m{v['_module_no']}", lang=lang)
                         for v in variants] if p]
 
 
-async def render_card_from_model(servant_id: str, model: dict, suffix: str = "") -> bytes | None:
+async def render_card_from_model(servant_id: str, model: dict, suffix: str = "",
+                                 lang: str = "zh") -> bytes | None:
     if not render.available():
         return None
-    key = _card_cache_key(model)
+    key = _card_cache_key(model, lang)
     path = cache_dir() / f"{servant_id}{suffix}_{key}.png"
     if path.is_file():
         return path.read_bytes()
 
     from ..card import build, fetch
 
-    html = build.build_html(model)
+    html = build.build_html(model, lang=lang)
     names = build.assets_used(html)
     extra = await asyncio.to_thread(fetch.extra_images, model, names)
     png = await render.render_png(html, CARD / "templates", extra_images=extra)
@@ -117,7 +118,7 @@ async def render_card_from_model(servant_id: str, model: dict, suffix: str = "")
     return png
 
 
-async def render_card(servant_id: str) -> bytes | None:
+async def render_card(servant_id: str, lang: str = "zh") -> bytes | None:
     """渲染某从者的卡图；无卡片数据或渲染器不可用时返回 None（调用方降级成文字）。"""
     if not render.available():
         return None
@@ -125,14 +126,14 @@ async def render_card(servant_id: str) -> bytes | None:
     if model is None:
         return None
 
-    key = _card_cache_key(model)
+    key = _card_cache_key(model, lang)
     path = cache_dir() / f"{servant_id}_{key}.png"
     if path.is_file():
         return path.read_bytes()
 
     from ..card import build, fetch  # 延迟导入 + 相对导入（插件包名不固定）
 
-    html = build.build_html(model)
+    html = build.build_html(model, lang=lang)
     names = build.assets_used(html)
     extra = await asyncio.to_thread(fetch.extra_images, model, names)
 

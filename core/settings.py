@@ -99,5 +99,5 @@ def format_settings(ev) -> str:
         lines.append(f"{LABELS[key]}：{shown}")
     lines.append("")
     lines.append("fgo设置出图 开/关 — 关掉后只看文字")
-    lines.append("fgo设置语言 中/日 — 名称语言（施工中）")
+    lines.append("fgo设置语言 中/日 — 从者卡/礼装卡的名称语言")
     return "\n".join(lines)
