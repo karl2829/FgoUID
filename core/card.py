@@ -44,12 +44,26 @@ def split_modules(model: dict) -> list[dict]:
     modules = (model.get("np") or {}).get("modules") or []
     if len(modules) < 2:
         return [model]
+
+    # Atlas 里有些「多模组」其实是同一条数据挂两个 num（玉兔就是这样），去掉完全相同的
+    seen, uniq = set(), []
+    for mod in modules:
+        sig = json.dumps({k: mod.get(k) for k in ("name", "rank", "sub", "chips", "effects")},
+                         ensure_ascii=False, sort_keys=True)
+        if sig in seen:
+            continue
+        seen.add(sig)
+        uniq.append(mod)
+    if len(uniq) < 2:
+        variant = dict(model)
+        variant["np"] = uniq[0]
+        return [variant]
     out = []
-    for i, mod in enumerate(modules):
+    for i, mod in enumerate(uniq):
         variant = dict(model)
         variant["np"] = mod
         variant["_module_no"] = mod.get("module", i + 1)
-        variant["_module_total"] = len(modules)
+        variant["_module_total"] = len(uniq)
         out.append(variant)
     return out
 
