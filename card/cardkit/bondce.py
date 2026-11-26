@@ -11,17 +11,23 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parent.parent / "bondce.json"
 _CACHE: dict | None = None
 
-# 条件原文 → (卡片金色词, 需要的特性)。金色词优先用 wiki 特性原词。
-COND_RULES = {
-    "〔秩序〕且〔善〕": ("秩序善", ["秩序", "善"]),
-    "〔拥有灵衣之人〕": ("持有灵衣之人", ["持有灵衣之人"]),
-    "〔秩序〕且〔女性〕": ("秩序女", ["秩序", "女性"]),
-    "〔兽科从者〕": ("兽科从者", ["兽科从者"]),
-    "〔活在当下的人类〕": ("活在当下的人类", ["活在当下的人类"]),
-    "〔中立〕": ("中立", ["中立"]),
+import re as _re
+
+# 条件里的叫法 → 从者特性/阵营里的实际词
+TERM_ALIAS = {
+    "拥有灵衣之人": "持有灵衣之人",
+    "星属性": "星", "天属性": "天", "地属性": "地", "人属性": "人", "兽属性": "兽",
+    "七骑士职阶": "七骑士职阶",     # 由职阶推导出来的伪特性
+    "兽科从者": "兽科从者", "活在当下的人类": "活在当下的人类",
 }
-# 或关系条件单独处理：任一命中即可
-COND_ANY = {"〔恶〕或〔星属性〕": ["恶", "星"]}
+SEVEN_KNIGHTS = {"saber", "archer", "lancer", "rider", "caster", "assassin", "berserker"}
+_STAGE = _re.compile(r"〔仅[^〕]*〕")     # 〔仅第4阶段〕〔仅灵衣xxxx〕这类修饰，不参与判断
+_TERM = _re.compile(r"〔([^〕]+)〕")
+
+
+def _cond_terms(cond: str) -> list[str]:
+    """拆条件串：去掉「仅第 N 阶段」修饰，取出所有〔词〕。"""
+    return _TERM.findall(_STAGE.sub("", cond or ""))
 
 
 def lookup(collection_no: int) -> list[dict]:
@@ -35,26 +41,36 @@ def lookup(collection_no: int) -> list[dict]:
     return _CACHE.get(str(collection_no), [])
 
 
-def fit(collection_no: int, traits: list[str]) -> tuple[list[str], set[str]]:
-    """按该从者实际特性，算出能吃到加成的金色词 + 已被金色词消费的特性。"""
+def fit(collection_no: int, traits: list[str], klass: str = "") -> tuple[list[str], set[str]]:
+    """按该从者实际特性，算出能吃到加成的金色词 + 已被金色词消费的特性。
+
+    以前用「条件原文 → 一个复合短词」（如〔秩序〕且〔女性〕→「秩序女」），
+    结果卡片上把「秩序女」当成一个特性显示出来，既不是特性也很难看。
+    现在拆成单个〔词〕逐个匹配：命中的词各自高亮，未在特性行出现的词只算条件、不显示。
+    """
     have = set(traits)
+    if (klass or "").lower() in SEVEN_KNIGHTS:
+        have.add("七骑士职阶")
     gold, consumed = [], set()
     for ce in lookup(collection_no):
-        cond = ce["cond"]
-        words: list[str] = []
-        need: list[str] = []
-        if cond in COND_RULES:
-            word, need = COND_RULES[cond]
-            if all(t in have for t in need):
-                words = [word]
-        elif cond in COND_ANY:
-            hit = [t for t in COND_ANY[cond] if t in have]
-            if hit:
-                words, need = hit, hit
+        cond = ce.get("cond", "")
+        terms = _cond_terms(cond)
+        if not terms:
+            continue
+        norm = [TERM_ALIAS.get(t, t) for t in terms]
+        hit = [t for t in norm if t in have]
+        if "或" in cond:
+            ok = bool(hit)                      # 或关系：任一命中
+            words = hit
+        else:
+            ok = len(hit) == len(norm)         # 且关系：全部命中
+            words = norm if ok else []
+        if not ok:
+            continue
         for w in words:
-            if w not in gold:
+            if w in traits and w not in gold:  # 只有会显示成特性的词才高亮
                 gold.append(w)
-        consumed.update(need)
+        consumed.update(w for w in words if w in have)
     return gold, consumed
 
 

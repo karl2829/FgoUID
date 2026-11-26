@@ -165,7 +165,8 @@ def build_traits(data: dict, budget: float = 88.0) -> str:
         return ""
     no = int(data.get("collection_no", 0))
     pool = traits + [data["gender"]] if data.get("gender") else traits   # 性别也是礼装条件
-    gold, consumed = bondce.fit(no, pool) if no else ([], set())
+    gold, consumed = bondce.fit(no, pool, data.get("class", "")) if no else ([], set())
+    gold = [w for w in gold if w in traits]      # 只高亮会显示成特性的词（「女性」这类不出现在特性行）
 
     limit = budget - 2.5          # 给末尾的 … 留点位置，别让它单独折到第 3 行
     parts, used, truncated = [], 0.0, False
