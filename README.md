@@ -215,6 +215,7 @@ FGOUID/
 ├── overrides/aliases.json # 别名覆盖
 ├── assets/help.png        # 降级用预渲染图
 ├── assets/emblem.png      # 迦勒底徽记
+├── templates/base_card.html   # **卡片基础模板**（只放骨架，评审版式用）
 ├── templates/help_card.html   # 帮助卡外框 + CSS，正文由模型投影
 ├── templates/list_card.html   # 列表卡外框 + CSS（卡池/活动共用）
 ├── templates/ce_card.html     # 礼装卡版式（左卡面右信息）

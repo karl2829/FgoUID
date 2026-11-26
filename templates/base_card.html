@@ -1,0 +1,258 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+/* ==========================================================================
+   FGOUID 卡片基础模板（BASE TEMPLATE v1）
+   —— 只放骨架，不放任何真实数据；用来定外框、间距、字号、配色。
+   引擎：pytakumi / Skia（不启浏览器）
+   禁写：::before/::after 装饰块、clip-path、filter:blur、backdrop-filter、drop-shadow
+   用法：内容区（{{BODY}}）由各卡片模型投影生成，外框与配色只在这里改一次
+   ========================================================================== */
+:root{
+  --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
+  --panel:#1B2A45; --slot:#0F1729;
+  --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --num:#F0D48A;
+  --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-dark:#A8862F; --gold-deep:#8A6E1A;
+  --metal-ring:linear-gradient(128deg,#6E5620 0%,#C9A227 9%,#F8EDCB 19%,#E8C877 31%,
+               #A8862F 47%,#C9A227 63%,#F5E3AE 79%,#8A6E1A 93%,#C9A227 100%);
+  --rule:linear-gradient(90deg,rgba(201,162,39,0) 0%,rgba(201,162,39,.55) 10%,
+         rgba(245,227,174,.78) 50%,rgba(201,162,39,.55) 90%,rgba(201,162,39,0) 100%);
+  --anno:#7FB2E5;            /* 标注色：只在模板里用，正式卡片没有 */
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+     -webkit-font-smoothing:antialiased;color:var(--text-1);background:#080d15}
+
+/* ---------- 外框：金属环 + 四角 + 顶部高光 + sheen ---------- */
+.card{width:1080px;padding:1.5px;border-radius:22px;background:var(--metal-ring);
+  box-shadow:0 0 0 1px rgba(227,195,107,.22), 0 0 18px rgba(227,195,107,.30),
+             0 0 56px rgba(227,195,107,.16), 0 26px 70px rgba(0,0,0,.66)}
+.inner{position:relative;width:100%;border-radius:20.5px;overflow:hidden;
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08),
+             inset 0 -1px 0 rgba(0,0,0,.55);
+  display:flex;flex-direction:column}
+.top-gloss{position:absolute;left:0;right:0;top:0;height:1.5px;pointer-events:none;z-index:6;
+  border-radius:20px 20px 0 0;
+  background:linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.55) 20%,
+             rgba(255,255,255,.14) 48%,rgba(255,255,255,0) 74%)}
+.sheen{position:absolute;left:-10%;right:-10%;top:-14%;height:40%;pointer-events:none;
+  background:radial-gradient(112% 70% at 26% -8%,rgba(201,162,39,.15),rgba(201,162,39,0) 62%)}
+.corner{position:absolute;width:34px;height:34px;z-index:6;pointer-events:none;opacity:.85}
+.corner.tl{left:14px;top:14px;border-left:1.5px solid var(--gold);border-top:1.5px solid var(--gold);border-radius:4px 0 0 0}
+.corner.tr{right:14px;top:14px;border-right:1.5px solid var(--gold);border-top:1.5px solid var(--gold);border-radius:0 4px 0 0}
+.corner.bl{left:14px;bottom:14px;border-left:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);border-radius:0 0 0 4px}
+.corner.br{right:14px;bottom:14px;border-right:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);border-radius:0 0 4px 0}
+
+/* ---------- ① 头部 ---------- */
+.hd{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;
+  gap:24px;padding:40px 46px 0}
+.hd-l{display:flex;flex-direction:column}
+.hr-top{display:flex;align-items:center;gap:16px}
+.emwrap{width:96px;height:96px;border-radius:50%;flex:0 0 96px;display:flex;
+  align-items:center;justify-content:center;
+  background:radial-gradient(70% 70% at 50% 45%,rgba(201,162,39,.16),rgba(201,162,39,.02) 78%);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.40), inset 0 1px 0 rgba(255,255,255,.10),
+             0 0 22px rgba(201,162,39,.12)}
+.em{width:72px;height:72px;display:block;flex:0 0 72px;opacity:.88}
+.eyebrow{font-size:16px;color:var(--text-3);letter-spacing:.20em}
+.eyebrow b{color:var(--gold-mid);font-weight:400}
+h1{font-size:54px;line-height:1.20;color:var(--text-1);margin-top:16px;letter-spacing:.10em;
+  text-shadow:0 2px 10px rgba(0,0,0,.55)}
+.sub{font-size:18px;color:var(--text-2);margin-top:10px;letter-spacing:.03em}
+.pill{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-top:6px;
+  padding:9px 15px 10px;border-radius:9px;font-size:15px;letter-spacing:.16em;color:var(--gold-hi);
+  background:rgba(201,162,39,.10);border:1px solid rgba(201,162,39,.48);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--gold-hi);
+  box-shadow:0 0 8px rgba(245,227,174,.8)}
+
+/* ---------- ② 分隔线 + 数据条 ---------- */
+.rule{height:1px;background:var(--rule);margin:26px 46px 0}
+.stats{display:flex;margin:20px 46px 0;border-radius:11px;
+  background:rgba(11,18,32,.42);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.stats .st{flex:1 1 0;text-align:center;padding:12px 0 13px;
+  border-right:1px solid rgba(201,162,39,.14)}
+.stats .st:last-child{border-right:0}
+.stats .st i{display:block;font-style:normal;font-size:11.5px;color:#7E8CA2;letter-spacing:.20em}
+.stats .st b{display:block;font-weight:400;font-size:27px;color:var(--gold-hi);margin-top:3px;
+  font-variant-numeric:tabular-nums}
+
+/* ---------- ③ 区块标题 ---------- */
+.sec-h{display:flex;align-items:center;gap:14px;margin:30px 46px 0}
+.sec-h .bar{width:5px;height:24px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
+.sec-h .t{font-size:24px;color:var(--gold-hi);letter-spacing:.22em}
+.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.55),rgba(201,162,39,0))}
+.sec-h .n{font-size:13.5px;color:var(--text-3);letter-spacing:.18em}
+
+/* ---------- ④ 列表行（键 / 描述 / 右侧示例） ---------- */
+.cmds{position:relative;z-index:1;margin:14px 46px 0;display:flex;flex-direction:column;gap:9px}
+.row{display:flex;align-items:center;gap:18px;padding:14px 18px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(180deg,#1E2F4D,#182742);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.40), 0 2px 10px rgba(0,0,0,.30)}
+.k{flex:0 0 214px;display:flex;align-items:center;justify-content:center;
+  padding:7px 0 8px;border-radius:8px;font-size:18px;letter-spacing:.02em;color:var(--gold-hi);
+  background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.50);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10)}
+.d{flex:1 1 auto;min-width:0;font-size:15.5px;line-height:1.58;color:var(--text-2);letter-spacing:.01em}
+.e{flex:0 0 218px;text-align:right;font-size:13.5px;color:#7E8CA2;letter-spacing:.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.e b{color:var(--text-2);font-weight:400}
+
+/* ---------- ⑤ 三列卡片（可用 / 施工中） ---------- */
+.grid{display:flex;gap:9px;margin:14px 46px 0}
+.gi{flex:1 1 0;min-width:0;padding:13px 16px 13px;border-radius:11px;
+  border:1px dashed rgba(255,255,255,.16);background:rgba(11,18,32,.30);
+  display:flex;flex-direction:column;gap:6px}
+.gi.on{border:1px solid rgba(201,162,39,.45);
+  background:linear-gradient(180deg,rgba(30,47,77,.78),rgba(24,39,66,.78));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 2px 10px rgba(0,0,0,.25)}
+.gi .gk{font-size:16.5px;color:#8FA0BC;letter-spacing:.02em}
+.gi.on .gk{color:var(--gold-hi)}
+.gi .gd{font-size:12.5px;line-height:1.52;color:#63718A}
+.gi.on .gd{color:var(--text-2)}
+.gi .go{font-size:10.5px;letter-spacing:.16em;color:#55637A;margin-top:1px}
+.gi.on .go{color:rgba(201,162,39,.88)}
+
+/* ---------- ⑥ 带图行卡（卡池/活动用的列表样式） ---------- */
+.rows{display:flex;flex-direction:column;gap:12px;margin:22px 46px 0}
+.g{display:flex;gap:18px;padding:14px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,#1E2F4D,#182742);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), inset 0 -1px 0 rgba(0,0,0,.40),
+             0 2px 10px rgba(0,0,0,.30)}
+.gb{flex:0 0 288px;width:288px;height:108px;border-radius:9px;overflow:hidden;
+  background:#0F1729;box-shadow:inset 0 0 0 1px rgba(201,162,39,.30);
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#6C7A90;letter-spacing:.10em}
+.gi2{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:6px}
+.gn{font-size:21px;line-height:1.34;color:var(--text-1);letter-spacing:.01em}
+.gm{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-3);letter-spacing:.04em}
+.tag{font-size:11.5px;letter-spacing:.12em;color:var(--gold-hi);padding:2px 8px 3px;border-radius:5px;
+  background:rgba(201,162,39,.12);border:1px solid rgba(201,162,39,.42)}
+.tag.dim{color:#B9CBE8;background:rgba(120,150,200,.12);border-color:rgba(120,150,200,.40)}
+.gd2{font-size:14.5px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.gu{font-size:13px;line-height:1.55;color:#8FA0BC}
+
+/* ---------- ⑦ 提示块 ---------- */
+.notes{margin:14px 46px 0;padding:16px 20px 18px;border-radius:12px;
+  background:rgba(11,18,32,.34);border:1px solid rgba(255,255,255,.06);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.notes .nt{display:flex;align-items:baseline;gap:10px;font-size:15px;line-height:1.85;color:var(--text-2)}
+.notes .nt i{font-style:normal;flex:0 0 auto;width:18px;text-align:center;font-size:12px;
+  color:rgba(201,162,39,.60)}
+.notes .nt b{color:var(--gold-hi);font-weight:400}
+
+/* ---------- ⑧ 装饰分隔 + 页脚 ---------- */
+.orn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:26px 46px 12px}
+.orn i{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,0),rgba(201,162,39,.55))}
+.orn i:last-child{background:linear-gradient(90deg,rgba(201,162,39,.55),rgba(201,162,39,0))}
+.orn b{width:7px;height:7px;transform:rotate(45deg);background:var(--gold);
+  box-shadow:0 0 0 3px #131E33, 0 0 0 4px rgba(201,162,39,.55), 0 0 12px rgba(227,195,107,.45)}
+.foot{position:relative;z-index:1;display:flex;justify-content:center;padding:12px 46px 20px}
+.foot .l1{font-size:13.5px;color:#6C7A90;letter-spacing:.02em}
+
+/* ---------- 模板标注（正式卡片里没有） ---------- */
+.tagline{display:block;margin:26px 46px 0;font-size:12.5px;color:var(--anno);letter-spacing:.06em}
+.tagline.mid{margin-top:18px}
+.ph{border:1px dashed rgba(127,178,229,.45);border-radius:10px;margin:10px 46px 0;
+  padding:14px 16px;font-size:13px;color:rgba(127,178,229,.85);letter-spacing:.04em;
+  background:rgba(127,178,229,.04)}
+</style></head><body>
+<div class="card"><div class="inner">
+<div class="top-gloss"></div>
+<div class="corner tl"></div><div class="corner tr"></div>
+<div class="corner bl"></div><div class="corner br"></div>
+<div class="sheen"></div>
+
+<!-- ① 头部 -->
+<header class="hd">
+  <div class="hd-l">
+    <div class="hr-top">
+      <div class="emwrap"><div class="em" style="width:72px;height:72px;border-radius:50%;
+        background:radial-gradient(circle at 50% 45%,rgba(227,195,107,.35),rgba(227,195,107,.08));"></div></div>
+      <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>B A S E&nbsp; T E M P L A T E</b></div>
+    </div>
+    <h1>基础模板</h1>
+    <div class="sub">外框 · 头部 · 数据条 · 区块 · 列表行 · 三列卡 · 带图行卡 · 提示 · 页脚</div>
+  </div>
+  <div class="pill"><i></i>版式 v1</div>
+</header>
+
+<div class="rule"></div>
+
+<!-- ② 数据条 -->
+<div class="stats">
+  <div class="st"><i>统　计</i><b>—</b></div>
+  <div class="st"><i>数　值</i><b>—</b></div>
+  <div class="st"><i>占位符</i><b>—</b></div>
+  <div class="st"><i>示　例</i><b>—</b></div>
+</div>
+
+<div class="tagline">① 头部：徽记 96px / 眉题 16px 字距 .20em / 主标题 54px / 副标题 18px / 右上角胶囊</div>
+<div class="tagline mid">② 数据条：4 格等分，标签 11.5px、数值 27px 金色</div>
+
+<!-- ③ 区块标题 -->
+<div class="sec-h"><div class="bar"></div><div class="t">区块标题</div>
+  <div class="line"></div><div class="n">S E C T I O N</div></div>
+<div class="tagline">③ 区块标题：竖条 5×24 + 中文 24px 字距 .22em + 右侧英文小字</div>
+
+<!-- ④ 列表行 -->
+<div class="cmds">
+  <div class="row"><div class="k">键　名</div>
+    <div class="d">描述文字：一行的说明，最多两行高度</div>
+    <div class="e">例　<b>右侧示例</b></div></div>
+  <div class="row"><div class="k">键　名</div>
+    <div class="d">描述文字：一行的说明，最多两行高度</div>
+    <div class="e">例　<b>右侧示例</b></div></div>
+</div>
+<div class="tagline">④ 列表行：左侧键名固定 214px，中间描述自适应，右侧示例 218px 右对齐</div>
+
+<!-- ⑤ 三列卡片 -->
+<div class="grid">
+  <div class="gi on"><div class="gk">卡片标题</div><div class="gd">可用态：金色实线框</div><div class="go">可　用</div></div>
+  <div class="gi on"><div class="gk">卡片标题</div><div class="gd">可用态：金色实线框</div><div class="go">可　用</div></div>
+  <div class="gi"><div class="gk">卡片标题</div><div class="gd">未开放：灰色虚线框</div><div class="go">施 工 中</div></div>
+</div>
+<div class="tagline">⑤ 三列卡（也可两列）：实线金框=可用，虚线灰框=施工中</div>
+
+<!-- ⑥ 带图行卡 -->
+<div class="rows">
+  <div class="g">
+    <div class="gb">288 × 108</div>
+    <div class="gi2">
+      <div class="gn">标题：一行 21px，最多两行</div>
+      <div class="gm"><span class="tag">标签</span><span class="tag dim">标签</span></div>
+      <div class="gd2">2026-01-01 ~ 2026-01-14（14 天）</div>
+      <div class="gu">说明文字：13px，最多两行，超出省略</div>
+    </div>
+  </div>
+  <div class="g">
+    <div class="gb">288 × 108</div>
+    <div class="gi2">
+      <div class="gn">标题：一行 21px，最多两行</div>
+      <div class="gm"><span class="tag">标签</span><span class="tag dim">标签</span></div>
+      <div class="gd2">2026-01-01 ~ 2026-01-14（14 天）</div>
+      <div class="gu">说明文字：13px，最多两行，超出省略</div>
+    </div>
+  </div>
+</div>
+<div class="tagline">⑥ 带图行卡：左 288×108 图位，右侧标题 / 标签 / 时间 / 说明</div>
+
+<!-- ⑦ 提示块 -->
+<div class="notes">
+  <div class="nt"><i>◆</i><div>提示块：<b>高亮词</b> 用金色，其余灰白，单行 1.85 行高</div></div>
+  <div class="nt"><i>◇</i><div>提示块第二行</div></div>
+</div>
+<div class="tagline">⑦ 提示块：左侧 ◆/◇ 标记，浅底 + 细边</div>
+
+<!-- ⑧ 内容占位（从者卡这类自带版式的卡片，内容区由模型投影） -->
+<div class="ph">内容区（{{BODY}}）：从者卡＝立绘 + 资料 + 宝具 + 技能；礼装卡＝卡面 + 信息；<br>
+列表卡＝上面的带图行卡；帮助卡＝列表行 + 三列卡 + 提示</div>
+<div class="tagline">⑧ 内容区由各自模型投影，外框与配色统一在这里</div>
+
+<div class="orn"><i></i><b></b><i></i></div>
+<footer class="foot">
+  <div class="l1">数据来源　—　｜　版权所有　—</div>
+</footer>
+</div></div></body></html>
