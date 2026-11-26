@@ -64,9 +64,11 @@ SECTION_FUN = {
     "title": "趣味互动",
     "en": "F U N",
     "kind": "grid",
+    "cols": 2,
     "items": [
         {"k": "fgo今日老婆", "d": "每天换一位，按你的 ID + 日期定种子", "on": True},
-        {"k": "fgo每日一抽", "d": "模拟十连，出货留档（施工中）", "on": False},
+        {"k": "fgo每日一抽", "d": "每天一抽，出货记进图鉴；同一天重发不刷新运气", "on": True},
+        {"k": "fgo图鉴", "d": "看自己收集了多少从者：星级分布与最近几抽", "on": True},
         {"k": "fgo年终总结", "d": "一年抽了多少、养了谁（需绑定账号）", "on": False},
     ],
 }
@@ -75,11 +77,10 @@ SECTION_SETTINGS = {
     "title": "设置",
     "en": "S E T T I N G S",
     "kind": "grid",
-    "status": "施工中",
     "items": [
         {"k": "fgo设置", "d": "查看当前配置项", "on": False},
         {"k": "fgo设置语言 中/日", "d": "卡片文案与名称语言", "on": False},
-        {"k": "fgo下载资源", "d": "预下载立绘/图标，减少首次等待", "on": False},
+        {"k": "fgo下载资源", "d": "后台预热立绘/图标，减少首次出图等待", "on": True},
     ],
 }
 
@@ -132,6 +133,8 @@ def help_model() -> dict:
                      "html": f"数据为离线快照（wiki @ {str(meta.get('source_commit', ''))[:7]}），"
                              "查询不联网、无外部依赖"},
                     {"mark": "◇", "hl": False, "html": "直接发送指令即可，无需 @ 机器人"},
+                    {"mark": "◇", "hl": False,
+                     "html": "每日一抽 / 今日老婆按「账号 + 日期」定种子：同一天结果固定，次日自动换"},
                 ],
             },
         ],
@@ -168,7 +171,7 @@ def _section_html(sec: dict) -> str:
     kind = sec["kind"]
     head = _sec_head(sec["title"], sec["en"], sec.get("status", ""))
     if kind == "grid":
-        return head + _grid_html(sec["items"])
+        return head + _grid_html(sec["items"], cols=sec.get("cols", 3))
     if kind == "rows":
         rows = "".join(
             f'<div class="row"><div class="k">{r["k"]}</div>'

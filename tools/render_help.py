@@ -1,33 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""渲染 fgo帮助 卡片图（构建期一次性生成，运行时不依赖 pytakumi）。
+"""渲染 fgo帮助 卡片图（构建期一次性生成 ``assets/help.png``，作为渲染失败时的兜底）。
+
+直接用插件自己的 ``core/help_card.py``（模型 + HTML 投影），保证兜底图和
+运行时渲染出来的图**同源**——以前这里另抄了一份上下文，模板一改就悄悄失配了。
 
 用法：
     .render-venv/bin/python tools/render_help.py            # → assets/help.png
     .render-venv/bin/python tools/render_help.py --dpr 1    # 低分辨率预览
-
-数据（数量、别名数、wiki commit）从 data/meta.json 与 data/fgo.db 现读，
-所以数据刷新后重跑一次即可，不会出现图里数字和库对不上的情况。
-
-依赖：pytakumi（HTML/CSS → Skia）。中文字体必须显式注入，否则全是豆腐块。
+    .render-venv/bin/python tools/render_help.py -o /tmp/x.png
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import io
-import json
-import os
 import pathlib
 import re
-import sqlite3
 import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TEMPLATE = ROOT / "templates" / "help_card.html"
 OUT = ROOT / "assets" / "help.png"
-META = ROOT / "data" / "meta.json"
-DB = ROOT / "data" / "fgo.db"
 
 FONT_CANDIDATES = (
     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
@@ -36,8 +31,22 @@ FONT_CANDIDATES = (
 )
 
 
+def load_plugin_core():
+    """按包路径导入插件的 core 包（不用 sys.path hack，避免和 GsCore 撞名）。"""
+    spec = importlib.util.spec_from_file_location(
+        "fgouid_core", ROOT / "core" / "__init__.py",
+        submodule_search_locations=[str(ROOT / "core")],
+    )
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["fgouid_core"] = mod
+    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    import fgouid_core.help_card as help_card  # noqa: E402
+
+    return help_card
+
+
 def load_fonts() -> list[bytes]:
-    got = [open(p, "rb").read() for p in FONT_CANDIDATES if os.path.exists(p)]
+    got = [open(p, "rb").read() for p in FONT_CANDIDATES if pathlib.Path(p).is_file()]
     if not got:
         raise RuntimeError("缺少中文字体，请安装 fonts-wqy-zenhei")
     return got
@@ -54,21 +63,6 @@ def collect_images(html: str, base: pathlib.Path) -> dict[str, bytes] | None:
         else:
             raise FileNotFoundError(f"模板引用的图片不存在：{p}")
     return out or None
-
-
-def build_context() -> dict[str, str]:
-    meta = json.loads(META.read_text(encoding="utf-8"))
-    counts = meta.get("counts", {})
-    with sqlite3.connect(f"file:{DB}?mode=ro", uri=True) as conn:
-        aliases = conn.execute("select count(*) from aliases").fetchone()[0]
-    return {
-        "SERVANTS": f"{counts.get('servants', 0):,}",
-        "CE": f"{counts.get('ce', 0):,}",
-        "EVENTS": f"{counts.get('events', 0):,}",
-        "GACHA": f"{counts.get('gacha', 0):,}",
-        "ALIASES": f"{aliases:,}",
-        "COMMIT": str(meta.get("source_commit", ""))[:7],
-    }
 
 
 def render(html: str, out: pathlib.Path, *, width=1080, dpr=2, bleed=40, margin=10) -> dict:
@@ -100,12 +94,8 @@ def main() -> int:
     ap.add_argument("--dpr", type=int, default=2)
     a = ap.parse_args()
 
-    html = TEMPLATE.read_text(encoding="utf-8")
-    for k, v in build_context().items():
-        html = html.replace("{{%s}}" % k, v)
-    left = re.findall(r"\{\{[A-Z_]+\}\}", html)
-    if left:
-        raise SystemExit(f"模板还有未填充占位符：{sorted(set(left))}")
+    help_card = load_plugin_core()
+    html = help_card.help_html(help_card.help_model())
 
     r = render(html, a.out, dpr=a.dpr)
     print(f"{r['path']}  {r['size'][0]}x{r['size'][1]}  {r['ms']} ms  {r['bytes'] / 1024:.0f} KB")

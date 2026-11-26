@@ -11,8 +11,17 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 | `fgo活动 [关键词]` | 未来活动，无则最近活动 |
 | `fgo卡池 [关键词]` | 近期卡池日历 / 按名称搜索 |
 | `fgo今日老婆` | 今天的老婆（按 ID + 日期定种子，每天换人） |
+| `fgo每日一抽` | 每天一抽（同一天结果固定），出货记进图鉴 |
+| `fgo图鉴` | 收集进度：已收集多少从者、星级分布、最近几抽 |
+| `fgo下载资源 [数量]` | 后台预热立绘/图标（默认 60 张，最多 200），减少首次出图等待 |
 | `fgo测试` | 链路自检 |
 | `fgo帮助` | 帮助卡（图片，主题同 fgo-wiki card-render） |
+
+趣味互动的「每日一抽 / 今日老婆」按「账号 + 日期」定种子：同一天重发不会刷新运气，
+次日自动换。抽卡记录写在 `<gsuid_core>/data/FGOUID/play.db`，插件更新不会覆盖。
+
+`fgo下载资源` 的进度记在 `data/FGOUID/prewarm.json`；素材缓存默认 300MB
+（`FGOUID_ART_CACHE_MB` 可调），所以一次只推一批，避免刚下好的图又被 LRU 淘汰。
 
 ## 安装
 
@@ -84,6 +93,7 @@ python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki --freeze   # 发布快�
 ```bash
 uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi==0.1.5 pillow
 PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → assets/help.png
+# 该脚本直接调用 core/help_card.py，与运行时渲染同源；改文案后重跑一次即可
 ```
 
 ## 功能规划（四块）
@@ -92,8 +102,8 @@ PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → a
 |---|---|---|
 | 公共信息 | ✅ 可用 | `fgo从者` `fgo礼装` `fgo活动` `fgo卡池` |
 | 个人数据 | 🚧 施工中 | `fgo登录` `fgo我的` `fgo刷新`（需绑定账号，抓包链接 / 扫码） |
-| 趣味互动 | ✅ 部分可用 | `fgo今日老婆`；`fgo每日一抽`、`fgo年终总结` 施工中 |
-| 设置 | 🚧 施工中 | `fgo设置`、语言 中/日、`fgo下载资源`（预下载素材） |
+| 趣味互动 | ✅ 部分可用 | `fgo今日老婆` `fgo每日一抽` `fgo图鉴`；`fgo年终总结` 施工中（需绑定账号） |
+| 设置 | 🚧 部分可用 | `fgo下载资源` ✅；`fgo设置`、语言 中/日 施工中 |
 
 `fgo帮助` 的图就是按这四块排的，未开放项标「施工中」。
 

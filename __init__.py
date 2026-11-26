@@ -1,5 +1,6 @@
 """FGOUID — FGO 查询插件（GsCore 指令版）"""
 
+import asyncio
 from pathlib import Path
 
 from gsuid_core.bot import Bot
@@ -11,6 +12,14 @@ from gsuid_core.sv import SV, Plugins
 from .core.card import render_cards
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
+from .core.play import draw, format_draw, format_stats, stats
+from .core.prewarm import (
+    DEFAULT_BATCH,
+    MAX_BATCH,
+    format_status,
+    run as prewarm_run,
+    status as prewarm_status,
+)
 
 from .core.db import (
     find_ce,
@@ -39,6 +48,10 @@ HELP_TEXT = (
     "fgo卡池 [关键词] — 卡池日历/搜索\n"
     "— 趣味互动 —\n"
     "fgo今日老婆 — 今天的老婆\n"
+    "fgo每日一抽 — 今天的一抽（出货记进图鉴）\n"
+    "fgo图鉴 — 收集进度\n"
+    "— 设置 —\n"
+    "fgo下载资源 [数量] — 后台预热素材\n"
     "— 其他 —\n"
     "fgo测试 — 链路自检\n"
     "fgo帮助 — 本帮助"
@@ -136,3 +149,74 @@ async def fgo_waifu(bot: Bot, ev: Event):
     if pngs:
         return await bot.send([MessageSegment.image(p) for p in pngs])
     await bot.send(format_waifu(pick))
+
+
+@sv.on_fullmatch(("fgo每日一抽", "每日一抽", "fgo一抽"), block=True)
+async def fgo_daily_draw(bot: Bot, ev: Event):
+    try:
+        res = draw(ev.user_id)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 每日一抽读写失败：{e}")
+        return await bot.send("抽卡记录暂时读写不了，稍后再试")
+    if res is None:
+        return await bot.send("数据还没同步好，稍后再试")
+    await bot.send(format_draw(res))
+    try:
+        pngs = await render_cards(res["servant_id"])
+    except Exception as e:
+        logger.warning(f"[FGOUID] 每日一抽卡图渲染失败，只发文字：{e}")
+        pngs = []
+    if pngs:
+        await bot.send([MessageSegment.image(p) for p in pngs])
+
+
+@sv.on_fullmatch(("fgo图鉴", "从者图鉴"), block=True)
+async def fgo_collection(bot: Bot, ev: Event):
+    await bot.send(format_stats(stats(ev.user_id)))
+
+
+# 后台任务要留引用，否则可能被 GC 掉
+_bg_tasks: set[asyncio.Task] = set()
+
+
+async def _prewarm_then_report(bot: Bot, limit: int) -> None:
+    try:
+        r = await prewarm_run(limit)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 素材预热中断：{e}")
+        try:
+            await bot.send(f"素材预热中断：{e}")
+        except Exception:
+            pass
+        return
+    st = r["status"]
+    msg = f"素材预热完成：本批 {r['ok']}/{r['asked']} 张"
+    if r["failed"]:
+        msg += f"（{r['failed']} 张没下来，下次会重试）"
+    msg += f"\n总进度 {st['done']}/{st['total']}"
+    try:
+        await bot.send(msg)
+    except Exception as e:
+        logger.debug(f"[FGOUID] 预热完成消息发送失败：{e}")
+
+
+@sv.on_command("fgo下载资源", block=True)
+async def fgo_prewarm(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    if arg in ("全部", "all"):
+        limit = MAX_BATCH
+    elif arg.isdigit():
+        limit = max(1, min(int(arg), MAX_BATCH))
+    else:
+        limit = DEFAULT_BATCH
+    st = prewarm_status()
+    if st["pending"] <= 0:
+        return await bot.send(f"素材已经全部预热完了（{st['total']} 张），直接查就行")
+    n = min(limit, st["pending"])
+    task = asyncio.create_task(_prewarm_then_report(bot, limit))
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+    await bot.send(
+        f"开始后台预热 {n} 张素材（全量 {st['total']}，已完成 {st['done']}）\n"
+        "下载期间查图会更快，完事我再报一次"
+    )
