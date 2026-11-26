@@ -14,6 +14,8 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 | `fgo每日一抽` | 每天一抽（同一天结果固定），出货记进图鉴 |
 | `fgo图鉴` | 收集进度：已收集多少从者、星级分布、最近几抽 |
 | `fgo下载资源 [数量]` | 后台预热立绘/图标（默认 60 张，最多 200），减少首次出图等待 |
+| `fgo设置` | 看当前配置（按群/按人） |
+| `fgo设置出图 开/关` | 关掉后从者/礼装/卡池/老婆只发文字（省流量、怕刷屏的群用） |
 | `fgo测试` | 链路自检 |
 | `fgo帮助` | 帮助卡（图片，主题同 fgo-wiki card-render） |
 
@@ -110,7 +112,7 @@ PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → a
 | 公共信息 | ✅ 可用 | `fgo从者` `fgo礼装` `fgo活动` `fgo卡池` |
 | 个人数据 | 🚧 施工中 | `fgo登录` `fgo我的` `fgo刷新`（需绑定账号，抓包链接 / 扫码） |
 | 趣味互动 | ✅ 部分可用 | `fgo今日老婆` `fgo每日一抽` `fgo图鉴`；`fgo年终总结` 施工中（需绑定账号） |
-| 设置 | 🚧 部分可用 | `fgo下载资源` ✅；`fgo设置`、语言 中/日 施工中 |
+| 设置 | 🚧 部分可用 | `fgo设置` `fgo设置出图` `fgo下载资源` ✅；语言 中/日 施工中 |
 
 `fgo帮助` 的图就是按这四块排的，未开放项标「施工中」。
 
@@ -147,6 +149,8 @@ FGOUID/
 ├── core/card.py           # 从者卡：模型 → 素材 → 渲染 → 缓存
 ├── core/gacha_card.py     # 卡池日历卡（列表卡）：行模型 → HTML → 渲染 → 缓存
 ├── core/ce_card.py        # 礼装卡：craft_essences + ce_details → HTML → 渲染 → 缓存
+├── core/settings.py       # 按群/按人的偏好（出图开关、语言），JSON 落 data/FGOUID
+├── core/store.py          # 运行时可写目录
 ├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
 │   ├── build.py           #   数据模型 → HTML（模板填充）
 │   ├── fetch.py           #   立绘/羁绊礼装/技能图标按需下载 + 缓存

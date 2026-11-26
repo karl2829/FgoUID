@@ -15,6 +15,14 @@ from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
 from .core.play import draw, format_draw, format_stats, stats
+from .core.settings import (
+    all_of,
+    format_settings,
+    image_on,
+    parse_bool,
+    put,
+    scope_of,
+)
 from .core.prewarm import (
     DEFAULT_BATCH,
     MAX_BATCH,
@@ -53,6 +61,8 @@ HELP_TEXT = (
     "fgo每日一抽 — 今天的一抽（出货记进图鉴）\n"
     "fgo图鉴 — 收集进度\n"
     "— 设置 —\n"
+    "fgo设置 — 看当前配置\n"
+    "fgo设置出图 开/关 — 只发文字 / 发卡片图\n"
     "fgo下载资源 [数量] — 后台预热素材\n"
     "— 其他 —\n"
     "fgo测试 — 链路自检\n"
@@ -67,6 +77,8 @@ async def fgo_ping(bot: Bot, ev: Event):
 
 @sv.on_fullmatch("fgo帮助", block=True)
 async def fgo_help(bot: Bot, ev: Event):
+    if not image_on(ev):
+        return await bot.send(HELP_TEXT)
     # 三级降级：服务器端渲染 → 仓库内预渲染图 → 纯文字
     try:
         png = await get_help_png()
@@ -104,6 +116,8 @@ async def fgo_servant(bot: Bot, ev: Event):
     row = find_servant(name)
     if row is None:
         return await bot.send(f"未找到从者：{name}")
+    if not image_on(ev):
+        return await bot.send(format_servant(row))
     # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字
     try:
         pngs = await render_cards(row["id"])
@@ -123,6 +137,8 @@ async def fgo_ce(bot: Bot, ev: Event):
     row = find_ce(name)
     if row is None:
         return await bot.send(f"未找到礼装：{name}")
+    if not image_on(ev):
+        return await bot.send(format_ce(row))
     try:
         png = await asyncio.wait_for(get_ce_png(dict(row), load_details_for(row)), timeout=45)
     except asyncio.TimeoutError:
@@ -146,6 +162,8 @@ async def fgo_event(bot: Bot, ev: Event):
 async def fgo_gacha(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
     rows = list_gacha(kw)
+    if not image_on(ev):
+        return await bot.send(format_gacha(rows))
     try:
         # 首屏要下横幅（~150KB/张），给个上限，超时先发文字，缓存会留给下一次
         png = await asyncio.wait_for(get_gacha_png(rows, kw), timeout=25)
@@ -165,6 +183,8 @@ async def fgo_waifu(bot: Bot, ev: Event):
     pick = today_waifu(ev.user_id)
     if pick is None:
         return await bot.send("数据还没同步好，稍后再试")
+    if not image_on(ev):
+        return await bot.send(format_waifu(pick))
     try:
         pngs = await render_cards(pick["id"])
     except Exception as e:
@@ -185,6 +205,8 @@ async def fgo_daily_draw(bot: Bot, ev: Event):
     if res is None:
         return await bot.send("数据还没同步好，稍后再试")
     await bot.send(format_draw(res))
+    if not image_on(ev):
+        return
     try:
         pngs = await render_cards(res["servant_id"])
     except Exception as e:
@@ -192,6 +214,39 @@ async def fgo_daily_draw(bot: Bot, ev: Event):
         pngs = []
     if pngs:
         await bot.send([MessageSegment.image(p) for p in pngs])
+
+
+@sv.on_fullmatch("fgo设置", block=True)
+async def fgo_settings(bot: Bot, ev: Event):
+    await bot.send(format_settings(ev))
+
+
+@sv.on_command("fgo设置出图", block=True)
+async def fgo_set_image(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    val = parse_bool(arg)
+    if val is None:
+        return await bot.send("用法：fgo设置出图 开 / 关（关掉后从者、礼装、卡池都只发文字）")
+    put(scope_of(ev), "image", val)
+    await bot.send("出图已" + ("开启 ✅ 之后会发卡片图" if val else "关闭 ✅ 之后只发文字"))
+
+
+@sv.on_command("fgo设置语言", block=True)
+async def fgo_set_lang(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    if arg in ("中", "中文", "zh"):
+        want = "zh"
+    elif arg in ("日", "日文", "jp", "ja"):
+        want = "jp"
+    else:
+        return await bot.send("用法：fgo设置语言 中 / 日")
+    cur = all_of(scope_of(ev))
+    if want == cur.get("lang"):
+        return await bot.send(f"语言已经是{'中文' if want == 'zh' else '日文'}了")
+    if want == "jp":
+        return await bot.send("日文名数据已经有了（模型里的 name_jp），但卡片版式还没做完 —— 施工中")
+    put(scope_of(ev), "lang", want)
+    await bot.send("语言已切换为中文 ✅")
 
 
 @sv.on_fullmatch(("fgo图鉴", "从者图鉴"), block=True)

@@ -78,8 +78,8 @@ SECTION_SETTINGS = {
     "en": "S E T T I N G S",
     "kind": "grid",
     "items": [
-        {"k": "fgo设置", "d": "查看当前配置项", "on": False},
-        {"k": "fgo设置语言 中/日", "d": "卡片文案与名称语言", "on": False},
+        {"k": "fgo设置", "d": "看当前配置；出图 开/关 当场生效", "on": True},
+        {"k": "fgo设置语言 中/日", "d": "名称语言（日文名数据已有，版式施工中）", "on": False},
         {"k": "fgo下载资源", "d": "后台预热立绘/图标，减少首次出图等待", "on": True},
     ],
 }
