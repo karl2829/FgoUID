@@ -21,14 +21,16 @@ DEFAULTS: dict[str, object] = {
     "image": True,     # 出图开关：关掉后所有卡片命令回落到文字
     "lang": "zh",      # zh / jp（名称语言，日文名数据来自模型里的 name_jp）
     "quality": "std",  # hd 高清 PNG ／ std WebP（默认）／ lite 小图 WebP
+    "skill": "compact",  # compact 只显示 Lv.1/6/10 ／ full 显示十级数值
 }
 
 # 给「fgo设置」文案用的中文名
-LABELS = {"image": "出图", "lang": "语言", "quality": "画质"}
+LABELS = {"image": "出图", "lang": "语言", "quality": "画质", "skill": "技能数值"}
 CHOICES = {
     "image": {True: "开", False: "关"},
     "lang": {"zh": "中文", "jp": "日文"},
     "quality": {"hd": "高清（PNG）", "std": "标准（WebP，默认）", "lite": "省流（小图 WebP）"},
+    "skill": {"compact": "精简（Lv.1/6/10）", "full": "完整（十级）"},
 }
 
 
@@ -101,6 +103,19 @@ def parse_quality(text: str) -> str | None:
     return None
 
 
+def parse_skill(text: str) -> str | None:
+    t = (text or "").strip().lower()
+    if t in ("完整", "full", "全部", "十级", "详细"):
+        return "full"
+    if t in ("精简", "compact", "简", "简略", "断点"):
+        return "compact"
+    return None
+
+
+def skill_of(ev) -> str:
+    return str(get(scope_of(ev), "skill") or "compact")
+
+
 def quality_of(ev) -> str:
     return str(get(scope_of(ev), "quality") or "std")
 
@@ -110,7 +125,7 @@ def format_settings(ev) -> str:
     cur = all_of(scope)
     where = "本群" if scope.startswith("g:") else "私聊"
     lines = [f"【FGOUID 设置】{where}"]
-    for key in ("image", "lang", "quality"):
+    for key in ("image", "lang", "quality", "skill"):
         val = cur.get(key)
         shown = CHOICES.get(key, {}).get(val, str(val))
         lines.append(f"{LABELS[key]}：{shown}")
@@ -118,4 +133,5 @@ def format_settings(ev) -> str:
     lines.append("fgo设置出图 开/关 — 关掉后只看文字")
     lines.append("fgo设置语言 中/日 — 从者卡/礼装卡的名称语言")
     lines.append("fgo设置画质 高清/标准/省流 — 图大小：1.3MB / 360KB / 200KB")
+    lines.append("fgo设置技能 完整/精简 — 技能数值显示十级，还是只显示 Lv.1/6/10")
     return "\n".join(lines)

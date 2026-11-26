@@ -24,9 +24,11 @@ from .core.settings import (
     image_on,
     parse_bool,
     parse_quality,
+    parse_skill,
     put,
     quality_of,
     scope_of,
+    skill_of,
 )
 
 
@@ -152,7 +154,8 @@ async def send_servant_card(bot: Bot, ev: Event, row) -> None:
     if not image_on(ev):
         return await bot.send(format_servant(row))
     try:
-        pngs = await render_cards(row["id"], lang=lang_of(ev), quality=quality_of(ev))
+        pngs = await render_cards(row["id"], lang=lang_of(ev), quality=quality_of(ev),
+                                  skill=skill_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 从者卡渲染失败，降级文字：{e}")
         pngs = []
@@ -272,7 +275,8 @@ async def fgo_waifu(bot: Bot, ev: Event):
     if not image_on(ev):
         return await bot.send(format_waifu(pick))
     try:
-        pngs = await render_cards(pick["id"], lang=lang_of(ev), quality=quality_of(ev))
+        pngs = await render_cards(pick["id"], lang=lang_of(ev), quality=quality_of(ev),
+                                  skill=skill_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 今日老婆卡渲染失败，降级文字：{e}")
         pngs = []
@@ -294,7 +298,8 @@ async def fgo_daily_draw(bot: Bot, ev: Event):
     if not image_on(ev):
         return
     try:
-        pngs = await render_cards(res["servant_id"], lang=lang_of(ev), quality=quality_of(ev))
+        pngs = await render_cards(res["servant_id"], lang=lang_of(ev), quality=quality_of(ev),
+                                  skill=skill_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 每日一抽卡图渲染失败，只发文字：{e}")
         pngs = []
@@ -347,6 +352,18 @@ async def fgo_set_quality(bot: Bot, ev: Event):
     tip = {"hd": "高清：PNG，最清晰", "std": "标准：WebP，体积约 1/3.6，手机上看不出差别",
            "lite": "省流：分辨率降到 1.5 倍，体积约 1/6"}[val]
     await bot.send(f"画质已切换为{tip} ✅")
+
+
+@sv.on_command("fgo设置技能", block=True)
+async def fgo_set_skill(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    val = parse_skill(arg)
+    if val is None:
+        return await bot.send("用法：fgo设置技能 精简 / 完整\n"
+                              "精简＝只显示 Lv.1/6/10 三格（默认，卡矮约 25%）· 完整＝十级全列")
+    put(scope_of(ev), "skill", val)
+    tip = "精简：只显示技能本断点 Lv.1/6/10" if val == "compact" else "完整：显示 Lv.1–10 全部数值"
+    await bot.send(f"技能数值已切换为{tip} ✅")
 
 
 @sv.on_fullmatch(("fgo图鉴", "从者图鉴"), block=True)

@@ -53,14 +53,26 @@ def _pick_names(cn: str, jp: str, rank: str = "", lang: str = "zh") -> tuple[str
         return _strip_rank(jp, rank), (cn if cn and cn != jp else "")
     return cn, (jp if jp and jp != cn else "")
 
-def _skill_effect(eff: dict) -> str:
+def _skill_effect(eff: dict, compact: bool = False) -> str:
     desc, values, fixed = eff.get("desc", ""), eff.get("values"), eff.get("fixed")
     head = f'<div class="sk-d"><span>{desc}</span></div>'
 
-    if not values:                      # 恒定效果 / 无数值效果：都是通栏单格
+    if not values:                      # 恒定效果 / 无数值效果
+        if compact:
+            if fixed:
+                return f'<div class="sk-e"><div class="sk-d"><span>{desc}</span><span class="vx">{fixed}</span></div></div>'
+            return (f'<div class="sk-e"><div class="sk-d"><span>{desc}</span>'
+                    f'<span class="vx vx-empty">∅</span></div></div>')
         body = fixed if fixed else '<span class="empty">∅</span>'
         cls = "vb1" if fixed else "vb1 vb-empty"
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
+
+    if compact:
+        # 精简版：数值直接并进说明行（Lv.1 / Lv.6 / Lv.10），整行省掉一格数值表
+        picks = [values[i - 1] for i in sorted(BREAK_LEVELS) if i <= len(values)]
+        joined = ' / '.join(picks)
+        return (f'<div class="sk-e"><div class="sk-d"><span>{desc}</span>'
+                f'<span class="vx">{joined}</span></div></div>')
 
     cells = []
     for i, v in enumerate(values, start=1):
@@ -70,8 +82,8 @@ def _skill_effect(eff: dict) -> str:
     return f'<div class="sk-e">{head}<div class="v10">{"".join(cells)}</div></div>'
 
 
-def _skill(sk: dict, lang: str = "zh") -> str:
-    effects = "".join(_skill_effect(e) for e in sk["effects"])
+def _skill(sk: dict, lang: str = "zh", compact: bool = False) -> str:
+    effects = "".join(_skill_effect(e, compact) for e in sk["effects"])
     cn = sk.get("name", "")
     jp = _strip_rank(sk.get("name_jp", ""), sk.get("rank", ""))
     rank = sk.get("rank", "")
@@ -92,10 +104,10 @@ def _skill(sk: dict, lang: str = "zh") -> str:
   </div>'''
 
 
-def build_skills(skills: list[dict], lang: str = "zh") -> str:
-    body = "\n".join(_skill(s, lang) for s in skills)
+def build_skills(skills: list[dict], lang: str = "zh", compact: bool = False) -> str:
+    body = "\n".join(_skill(s, lang, compact) for s in skills)
     return f'''<div class="sec-h"><span class="bar"></span><span class="t">持有技能</span>
-  <span class="line"></span><span class="n">S K I L L S</span></div>
+  <span class="line"></span><span class="n">S K I L L S{'　／　Lv.1 / 6 / 10' if compact else ''}</span></div>
 
 <section class="skills">
 {body}
@@ -193,13 +205,13 @@ def assets_used(html: str) -> list[str]:
     return sorted(set(re.findall(r'src="\.\./assets/([^"]+)"', html)))
 
 
-def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
+def build_html(data: dict, hero_only: bool = False, lang: str = "zh", skill: str = "compact") -> str:
     """把从者数据模型填进模板，返回完整 HTML（不落盘、不渲染）。"""
     html = TPL.read_text(encoding="utf-8")
     if hero_only:                       # 只出从者区模版：技能/宝具留空
         html = html.replace("<!--SKILLS-->", "").replace("<!--NP-->", "")
     else:
-        html = html.replace("<!--SKILLS-->", build_skills(data["skills"], lang))
+        html = html.replace("<!--SKILLS-->", build_skills(data["skills"], lang, skill == "compact"))
         nps = (data.get("np") or {}).get("modules") or ([data["np"]] if data.get("np") else [])
         multi = len(nps) > 1 or data.get("_module_total", 0) > 1   # 插件侧按模组拆图时会带 _module_*
         html = html.replace("<!--NP-->", "\n".join(
