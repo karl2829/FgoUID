@@ -22,6 +22,19 @@ BREAK_LEVELS = {1, 6, 10}   # 技能本断点：Lv.1 / Lv.6 / Lv.10
 HIGHLIGHT_LEVEL = 6         # 高亮常驻断点
 
 
+def _clamp_text(text: str, budget: float = 72.0) -> str:
+    """按字宽预算截断（Skia 不会给 -webkit-line-clamp 画省略号，只能自己补 …）。"""
+    text = (text or "").strip()
+    used, out = 0.0, []
+    for ch in text:
+        w = 1.0 if ord(ch) > 0x2E80 else 0.55
+        if used + w > budget:
+            return "".join(out).rstrip() + "…"
+        out.append(ch)
+        used += w
+    return text
+
+
 def _strip_rank(name_jp: str, rank: str = "") -> str:
     """日文技能名末尾一般带阶级（「カリスマ B」），卡面已有 RANK 栏，去掉避免重复。"""
     name_jp = (name_jp or "").strip()
@@ -195,6 +208,8 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
     _name, _name_jp = _pick_names(data.get("name", ""), data.get("name_jp", ""), "", lang)
     if not _name_jp:                    # 没有副名称就整行去掉
         html = html.replace('    <div class="name-jp">{{NAME_JP}}</div>', "")
+    if not (data.get("bond") or {}).get("name"):     # 没有羁绊礼装（部分 NPC/活动从者）整块去掉
+        html = re.sub(r"\s*<!--BOND_START-->.*?<!--BOND_END-->", "", html, flags=re.S)
 
     # ---- 头部字段全部来自 data（build_data.py 从 fgo-wiki MD 解析）----
     sid = str(data.get("servant_id") or data.get("id") or "")
@@ -245,7 +260,7 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
         "ART": f"art_{sid}.png",
         "BOND_IMG": f"bond_ce_{sid}.png",
         "BOND_NAME": bond.get("name", ""),
-        "BOND_EFFECT": bond.get("effect", ""),
+        "BOND_EFFECT": _clamp_text(bond.get("effect", ""), 72),
     }.items():
         html = html.replace("{{" + k + "}}", str(v))
     return html
