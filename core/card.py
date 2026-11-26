@@ -34,11 +34,18 @@ _TPL_SIG: str | None = None
 
 
 def _template_sig() -> str:
-    """模板指纹：改版式（不是改数据）也要让旧缓存失效，否则用户一直看到老图。"""
+    """版式指纹：模板 + 渲染代码（build.py）任何一处变了都要让旧缓存失效。
+
+    只哈希模板不够——像「∅ / Ø 占位符」「技能标题排版」这种改动在 build.py 里，
+    不失效的话用户会一直看到老图。
+    """
     global _TPL_SIG
     if _TPL_SIG is None:
-        tpl = CARD / "templates" / "servant_card_data.html"
-        _TPL_SIG = hashlib.sha1(tpl.read_bytes()).hexdigest()[:8] if tpl.is_file() else "notpl"
+        h = hashlib.sha1()
+        for f in (CARD / "templates" / "servant_card_data.html", CARD / "build.py"):
+            if f.is_file():
+                h.update(f.read_bytes())
+        _TPL_SIG = h.hexdigest()[:8]
     return _TPL_SIG
 
 
