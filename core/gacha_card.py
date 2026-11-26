@@ -164,7 +164,8 @@ async def prewarm_banners(limit: int = 12) -> int:
     if not mapping:
         return 0
     got = await asyncio.to_thread(card_fetch.remote_images, mapping)
-    missing = [n for n in mapping if n not in got]
+    have = {k[len("../assets/"):] for k in got if k.startswith("../assets/")}
+    missing = [n for n in mapping if n not in have]
     from gsuid_core.logger import logger
 
     if missing:
