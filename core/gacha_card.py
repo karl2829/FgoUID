@@ -146,6 +146,27 @@ def _cache_key(model: dict) -> str:
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
+async def prewarm_banners(limit: int = 12) -> int:
+    """后台把接下来几期卡池的横幅下到缓存（首图慢主要慢在这 ~150KB/张的下图）。
+
+    只下横幅、不渲染：启动时跑一次，之后 ``fgo卡池`` 基本 4s 内出图。
+    """
+    from ..card import fetch as card_fetch
+    from .db import list_gacha
+
+    rows = list_gacha("", limit)
+    mapping = {}
+    for r in rows:
+        keys = r.keys()
+        banner = (r["banner"] if "banner" in keys else "") or ""
+        if banner:
+            mapping[_banner_name(banner)] = banner
+    if not mapping:
+        return 0
+    got = await asyncio.to_thread(card_fetch.remote_images, mapping)
+    return len(got)
+
+
 async def get_gacha_png(rows, keyword: str = "") -> bytes | None:
     """渲染卡池卡；pytakumi 不可用/渲染失败时返回 None（调用方降级文字）。"""
     model = gacha_model(rows, keyword)

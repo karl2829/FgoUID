@@ -10,7 +10,7 @@ from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_cards
-from .core.gacha_card import get_gacha_png
+from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
 from .core.play import draw, format_draw, format_stats, stats
@@ -136,7 +136,11 @@ async def fgo_gacha(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
     rows = list_gacha(kw)
     try:
-        png = await get_gacha_png(rows, kw)
+        # 首屏要下横幅（~150KB/张），给个上限，超时先发文字，缓存会留给下一次
+        png = await asyncio.wait_for(get_gacha_png(rows, kw), timeout=25)
+    except asyncio.TimeoutError:
+        logger.info("[FGOUID] 卡池卡首次渲染超时，先发文字版")
+        return await bot.send(format_gacha(rows) + "\n（卡池卡首次生成要下图，稍后再发一次就有图了）")
     except Exception as e:
         logger.warning(f"[FGOUID] 卡池卡渲染失败，降级文字：{e}")
         png = None
@@ -229,3 +233,22 @@ async def fgo_prewarm(bot: Bot, ev: Event):
         f"开始后台预热 {n} 张素材（全量 {st['total']}，已完成 {st['done']}）\n"
         "下载期间查图会更快，完事我再报一次"
     )
+
+
+# 启动时静默预热接下来几期的卡池横幅：首图慢主要慢在下这 150KB/张的图
+async def _startup_prewarm() -> None:
+    try:
+        n = await prewarm_banners(12)
+        logger.debug(f"[FGOUID] 卡池横幅预热 {n} 张")
+    except Exception as e:
+        logger.debug(f"[FGOUID] 卡池横幅预热跳过：{e}")
+
+
+try:
+    from gsuid_core.server import on_core_start
+
+    @on_core_start(priority=30)
+    async def _fgouid_core_start() -> None:
+        asyncio.create_task(_startup_prewarm())
+except Exception as e:  # 老版本 core 没有这个钩子就跳过
+    logger.debug(f"[FGOUID] on_core_start 不可用：{e}")
