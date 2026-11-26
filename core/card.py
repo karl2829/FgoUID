@@ -30,8 +30,20 @@ def cache_dir() -> Path:
         return p
 
 
+_TPL_SIG: str | None = None
+
+
+def _template_sig() -> str:
+    """模板指纹：改版式（不是改数据）也要让旧缓存失效，否则用户一直看到老图。"""
+    global _TPL_SIG
+    if _TPL_SIG is None:
+        tpl = CARD / "templates" / "servant_card_data.html"
+        _TPL_SIG = hashlib.sha1(tpl.read_bytes()).hexdigest()[:8] if tpl.is_file() else "notpl"
+    return _TPL_SIG
+
+
 def _card_cache_key(model: dict, lang: str = "zh") -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + "|" + lang
+    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + "|" + lang + "|" + _template_sig()
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 

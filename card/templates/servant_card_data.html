@@ -68,11 +68,11 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
              rgba(245,227,174,.42) 52%,rgba(201,162,39,.26) 78%,rgba(201,162,39,0) 100%)}
 .hr-top{display:flex;align-items:center;gap:10px}
 .cl-icon{width:34px;height:34px;display:block;flex:0 0 34px;opacity:.95}
-.stars{width:114px;height:30px;display:block;opacity:.96}
-.stars-tr{position:absolute;top:44px;right:16px;z-index:3;display:flex;align-items:center;
-  padding:9px 12px 10px;border-radius:10px;
-  background:radial-gradient(120% 130% at 50% 50%,rgba(8,13,24,.74) 40%,rgba(8,13,24,0) 100%)}
-.hero .art .stars-tr img{width:114px;height:30px;object-fit:contain;filter:none;opacity:1;display:block}
+/* 星级：CSS 画的五角星（原来的 badge 贴图又粗又糊） */
+.stars-inline{font-size:12px;line-height:1;letter-spacing:1px;color:#F0DDA0;
+  text-shadow:0 1px 2px rgba(0,0,0,.85), 0 0 6px rgba(227,195,107,.35);white-space:nowrap}
+.stars-inline.silver{color:#C6D1E1}
+.stars-inline.bronze{color:#D3A077}
 .hr-sub{display:flex;align-items:baseline;gap:14px;margin-top:8px}
 .no{font-size:17px;color:var(--gold-mid);letter-spacing:.12em;font-variant-numeric:tabular-nums}
 .origin{display:flex;gap:18px;margin-top:12px;font-size:15px;color:var(--text-3)}
@@ -184,32 +184,32 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .sec-h .n{font-size:14px;color:var(--text-3);letter-spacing:.18em}
 
 /* ---------- 技能区：整宽三行 ---------- */
-.skills{position:relative;z-index:1;margin:13px 46px 0;display:flex;flex-direction:column;gap:12px}
-.sk{border-radius:16px;border:1px solid rgba(255,255,255,.08);padding:14px 20px 16px;
+.skills{position:relative;z-index:1;margin:9px 46px 0;display:flex;flex-direction:column;gap:8px}
+.sk{border-radius:14px;border:1px solid rgba(255,255,255,.08);padding:10px 16px 11px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), 0 2px 14px rgba(0,0,0,.35)}
-.sk-h{display:flex;align-items:center;gap:14px}
-.sk-h img{width:62px;height:62px;border-radius:50%;display:block;flex:0 0 62px;
+.sk-h{display:flex;align-items:center;gap:11px}
+.sk-h img{width:46px;height:46px;border-radius:50%;display:block;flex:0 0 46px;
   box-shadow:0 0 0 2px rgba(11,18,32,.72), 0 0 0 3px rgba(255,255,255,.14), 0 4px 12px rgba(0,0,0,.5)}
-.sk-h .nm{font-size:23px;color:var(--text-1)}
-.sk-h .nm-jp{font-size:14px;color:#6C7A90;letter-spacing:.02em}
-.sk-h .rk{font-size:17px;color:var(--gold);letter-spacing:.06em}
+.sk-h .nm{font-size:19px;color:var(--text-1)}
+.sk-h .nm-jp{font-size:13px;color:#6C7A90;letter-spacing:.02em}
+.sk-h .rk{font-size:15px;color:var(--gold);letter-spacing:.06em}
 .sk-h .sep{width:1px;height:18px;background:rgba(255,255,255,.14);margin:0 3px}
-.sk-h .cd{font-size:15.5px;color:var(--text-3);letter-spacing:.03em}
-.sk-h .cd b{color:var(--gold-mid);font-weight:400;font-size:17.5px}
+.sk-h .cd{font-size:14px;color:var(--text-3);letter-spacing:.03em}
+.sk-h .cd b{color:var(--gold-mid);font-weight:400;font-size:15.5px}
 .sk-h .sp{flex:1}
 .sk-h .lg{font-size:13px;color:#7C8AA0;letter-spacing:.04em}
 .sk-h .lg b{color:var(--gold-mid);font-weight:400}
-.sk-e{margin-top:11px}
-.sk-d{display:flex;align-items:baseline;gap:9px;font-size:17px;color:var(--text-2)}
+.sk-e{margin-top:7px}
+.sk-d{display:flex;align-items:baseline;gap:9px;font-size:14.5px;color:var(--text-2)}
 .sk-d .tag{font-size:13px;color:var(--gold-mid);letter-spacing:.06em}
-.v10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:7px}
-.v10 .vb{position:relative;height:44px;display:flex;align-items:center;justify-content:center;
-  padding:0 4px;border-radius:6px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.10);
-  color:var(--num);font-size:16px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+.v10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;margin-top:5px}
+.v10 .vb{position:relative;height:31px;display:flex;align-items:center;justify-content:center;
+  padding:0 3px;border-radius:5px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.07);
+  color:#C6BDA9;font-size:13px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.v10 .vb.mid{background:rgba(201,162,39,.16);border-color:rgba(201,162,39,.60);color:var(--gold-hi);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 0 12px rgba(201,162,39,.12)}
+.v10 .vb.mid{background:rgba(201,162,39,.10);border-color:rgba(201,162,39,.42);color:#DCC78F;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 0 8px rgba(201,162,39,.08)}
 .v10 .vb .brk{position:absolute;left:22%;right:22%;bottom:0;height:2.5px;border-radius:2px;
   background:var(--gold-mid);box-shadow:0 0 6px rgba(201,162,39,.5)}
 .v10 .vb.mid .brk{background:var(--gold-hi)}
@@ -218,56 +218,56 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 
 /* ---------- 宝具区 ---------- */
 .np{position:relative;z-index:1;display:flex;flex-direction:column;
-  margin:26px 46px 0;border-radius:16px;border:1px solid rgba(255,255,255,.08);padding:20px 22px 22px;
+  margin:16px 46px 0;border-radius:16px;border:1px solid rgba(255,255,255,.08);padding:13px 18px 15px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), 0 2px 14px rgba(0,0,0,.35)}
-.np-head{height:64px;display:flex;align-items:center;gap:13px;padding:0 18px;border-radius:11px;
+.np-head{height:46px;display:flex;align-items:center;gap:11px;padding:0 14px;border-radius:10px;
   background:linear-gradient(180deg,#263B62,#1F3054);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.11), inset 0 -1px 0 rgba(0,0,0,.35)}
 .goldbar{width:5px;height:26px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
 .np-mod{font-size:15px;color:var(--text-3);letter-spacing:.12em;padding:2px 9px 3px;border-radius:5px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05)}
-.np-head .t{font-size:29px;color:var(--gold-hi);letter-spacing:.26em}
+.np-head .t{font-size:23px;color:var(--gold-hi);letter-spacing:.24em}
 .dot{width:4px;height:4px;border-radius:50%;background:var(--gold-mid);opacity:.85}
-.stamp{font-size:13.5px;letter-spacing:.30em;background:var(--metal-foil);
+.stamp{font-size:12px;letter-spacing:.28em;background:var(--metal-foil);
   background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
   text-shadow:0 1px 0 rgba(0,0,0,.6), 0 0 8px rgba(227,195,107,.18)}
 .spacer{flex:1}
 .np-rule{width:110px;height:1px;background:linear-gradient(90deg,rgba(201,162,39,0),rgba(245,227,174,.8))}
-.np-mark{font-size:19px;color:rgba(201,162,39,.85);letter-spacing:.10em}
+.np-mark{font-size:15px;color:rgba(201,162,39,.85);letter-spacing:.10em}
 
-.name-row{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-top:17px}
-.np-name{font-size:44px;color:var(--text-1);text-shadow:0 2px 8px rgba(0,0,0,.45)}
-.np-sub{font-size:19px;color:var(--text-2);margin-top:3px}
+.name-row{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-top:12px}
+.np-name{font-size:34px;color:var(--text-1);text-shadow:0 2px 8px rgba(0,0,0,.45)}
+.np-sub{font-size:14.5px;color:var(--text-2);margin-top:3px}
 .rank{display:flex;flex-direction:column;align-items:flex-end;gap:1px;padding-bottom:4px;flex:0 0 auto}
-.rk-lb{font-size:11.5px;letter-spacing:.30em;color:var(--text-3)}
-.rk-v{font-size:40px;line-height:1.05;background:var(--metal-foil);
+.rk-lb{font-size:10.5px;letter-spacing:.28em;color:var(--text-3)}
+.rk-v{font-size:30px;line-height:1.05;background:var(--metal-foil);
   background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
   text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 10px rgba(227,195,107,.20)}
 
-.rk-note{font-size:12.5px;color:var(--gold-mid);letter-spacing:.10em;margin-top:3px}
-.chips{display:flex;gap:9px;margin-top:15px;flex-wrap:wrap}
-.chip{height:34px;display:inline-flex;align-items:center;padding:0 13px;border-radius:8px;font-size:18px;
+.rk-note{font-size:11.5px;color:var(--gold-mid);letter-spacing:.08em;margin-top:2px}
+.chips{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.chip{height:27px;display:inline-flex;align-items:center;padding:0 11px;border-radius:7px;font-size:14.5px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.10)}
 .c-gold{color:var(--gold-hi);background:rgba(227,195,107,.14);border:1px solid rgba(227,195,107,.55)}
 .c-buster{color:#F2A695;background:rgba(216,84,63,.16);border:1px solid rgba(216,84,63,.55)}
 .c-blue{color:var(--blue-dim);background:rgba(91,143,214,.16);border:1px solid rgba(91,143,214,.5)}
 .c-ghost{color:var(--text-2);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14)}
 
-.div-weak{height:1px;background:rgba(255,255,255,.10);margin:16px 0 14px}
+.div-weak{height:1px;background:rgba(255,255,255,.10);margin:10px 0 8px}
 
 /* ---------- 宝具效果块：描述 + 独立数值框 ---------- */
-.eb{margin-top:15px}
+.eb{margin-top:8px}
 .eb-d{display:flex;align-items:baseline;gap:10px}
-.eb-d .n{font-size:24px;color:var(--text-1)}
-.eb-d .h{font-size:15px;color:var(--gold-mid)}
-.eb-v{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:9px}
-.vb5{height:52px;display:flex;align-items:center;justify-content:center;border-radius:7px;
+.eb-d .n{font-size:19px;color:var(--text-1)}
+.eb-d .h{font-size:13px;color:var(--gold-mid)}
+.eb-v{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:7px}
+.vb5{height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;
   background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.10);
-  color:var(--num);font-size:24px;font-variant-numeric:tabular-nums;
+  color:#D8CDB6;font-size:16.5px;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .vb5.on{background:rgba(201,162,39,.16);border-color:rgba(201,162,39,.60);color:var(--gold-hi);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.10), 0 0 14px rgba(201,162,39,.12)}
-.vb5.none{color:#7C8AA0;font-size:18px;letter-spacing:.10em;border-style:dashed}
+.vb5.none{color:#7C8AA0;font-size:14px;letter-spacing:.10em;border-style:dashed}
 
 .npbar{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;margin-top:16px;
   background:var(--slot);border:1px solid rgba(255,255,255,.05);box-shadow:inset 0 2px 6px rgba(0,0,0,.55)}
@@ -286,14 +286,8 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .orn b{width:7px;height:7px;transform:rotate(45deg);background:var(--gold);
   box-shadow:0 0 0 3px #131E33, 0 0 0 4px rgba(201,162,39,.55), 0 0 12px rgba(227,195,107,.45)}
 
-.foot{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;
-  padding:16px 46px 28px}
-.foot .l{display:flex;flex-direction:column;gap:7px}
-.foot .l1{font-size:15px;color:#6C7A90;letter-spacing:.02em}
-.foot .l2{font-size:15px;color:#6C7A90;letter-spacing:.02em}
-.foot .r{text-align:right;display:flex;flex-direction:column;gap:7px}
-.foot .r1{font-size:15px;color:#6C7A90;letter-spacing:.06em}
-.foot .r2{font-size:15px;color:#6C7A90;letter-spacing:.06em}
+.foot{position:relative;z-index:1;display:flex;justify-content:center;padding:12px 46px 20px}
+.foot .l1{font-size:13.5px;color:#6C7A90;letter-spacing:.02em}
 
 /* ============ v2 版式（覆盖） ============ */
 .hero{display:flex;align-items:stretch;position:relative;z-index:1}
@@ -318,7 +312,12 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
   padding:36px 44px 32px 34px}
 .name{font-size:42px;line-height:1.30;margin-top:12px;letter-spacing:.01em}
 .name-jp{font-size:18px;letter-spacing:.06em;color:var(--text-2);margin-top:5px}
-.hr2{height:1px;margin:18px 0 0;
+.specs{display:flex;align-items:baseline;gap:18px;margin-top:9px}
+.specs .sp{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.specs .sp i{font-style:normal;font-size:12.5px;letter-spacing:.04em;color:#6C7A90}
+.specs .sp b{font-weight:400;font-size:15.5px;color:var(--text-1);letter-spacing:.02em}
+.specs .sp b.gold{color:var(--gold-hi)}
+.hr2{height:1px;margin:14px 0 0;
   background:linear-gradient(90deg,rgba(201,162,39,.34) 0%,rgba(201,162,39,.12) 60%,rgba(201,162,39,0) 100%)}
 
 .nums{display:flex;align-items:flex-end;margin-top:16px}
@@ -330,19 +329,20 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .nums .cards{display:flex;align-items:center;gap:8px;height:29px;margin-top:2px;margin-bottom:4px}
 .nums .cards img{height:29px;width:auto;display:block}
 
-.hex{display:flex;margin-top:15px}
+.hex{display:flex;margin-top:12px}
 .hex .hx{flex:1 1 0;text-align:center;border-right:1px solid rgba(201,162,39,.14)}
 .hex .hx:last-child{border-right:0}
 .hex .hx i{display:block;font-style:normal;font-size:10.5px;color:#7E8CA2;letter-spacing:.10em}
 .hex .hx b{display:block;font-size:18px;font-weight:400;color:var(--text-1);margin-top:2px;letter-spacing:.02em}
 
-.traits-inline{margin-top:15px;font-size:13.5px;line-height:1.85;color:var(--text-2)}
+.traits-inline{margin-top:12px;font-size:12.8px;line-height:1.7;color:var(--text-2)}
+.traits-inline .more{color:#5A677D;margin-left:2px}
 .traits-inline i{font-style:normal;color:rgba(201,162,39,.42);margin:0 5px}
 .traits-inline .g{color:var(--gold-hi)}
 
-.bond{margin-top:auto;display:flex;align-items:center;gap:14px;padding-top:18px;
+.bond{margin-top:auto;display:flex;align-items:center;gap:13px;padding-top:14px;
   border-top:1px solid rgba(201,162,39,.16)}
-.bond .th img{width:74px;height:74px;border-radius:8px;display:block}
+.bond .th img{width:66px;height:66px;border-radius:8px;display:block}
 .bond .b1{font-size:11px;color:#7E8CA2;letter-spacing:.18em}
 .bond .b2{font-size:19px;color:var(--text-1);margin-top:5px}
 .bond .b3{font-size:12px;color:#6C7A90;margin-top:6px;letter-spacing:.04em}
@@ -350,9 +350,9 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .bond .b4 i{font-style:normal;color:rgba(201,162,39,.40);margin:0 5px}
 
 .v1{display:flex;margin-top:7px}
-.vb1{flex:1 1 auto;height:44px;display:flex;align-items:center;justify-content:center;
-  border-radius:6px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.10);
-  color:var(--num);font-size:16px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+.vb1{flex:1 1 auto;height:31px;display:flex;align-items:center;justify-content:center;
+  border-radius:5px;background:rgba(11,18,32,.50);border:1px solid rgba(255,255,255,.07);
+  color:#C6BDA9;font-size:13px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
 .vb5.vb5-fix{grid-column:1 / -1}
 .vb-empty{background:rgba(11,18,32,.34);border-color:rgba(255,255,255,.06);box-shadow:none}
@@ -371,7 +371,7 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
       <div class="tint"></div><div class="art-edge"></div>
       <div class="art-info">
         <span class="no">No.{{NO}}</span>
-        <i class="vp"></i><img src="../assets/badge_{{RNUM}}.png" style="height:15px;width:auto;display:block;flex:0 0 auto">
+        <i class="vp"></i><span class="stars-inline {{STAR_TIER}}">{{STARS}}</span>
         <i class="vp"></i><span class="p"><em>画师</em><b>{{ARTIST}}</b></span>
         <i class="vp"></i><span class="p"><em>声优</em><b>{{CV}}</b></span>
       </div>
@@ -386,6 +386,11 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
     </div>
     <div class="name">{{NAME}}</div>
     <div class="name-jp">{{NAME_JP}}</div>
+    <div class="specs">
+      <span class="sp"><i>主属性</i><b class="gold">{{CAMP}}</b></span>
+      <span class="sp"><i>副属性</i><b>{{ALIGN}}</b></span>
+      <span class="sp"><i>性别</i><b>{{GENDER}}</b></span>
+    </div>
     <div class="hr2"></div>
     <div class="nums">
       <div class="cell"><div class="lb">A T K</div><div class="v">{{ATK}}<small>Lv.{{LEVEL}}</small></div></div>
@@ -411,13 +416,6 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 <!--SKILLS-->
 <div class="orn"><i></i><b></b><i></i></div>
 <footer class="foot">
-  <div class="l">
-    <div class="l1">数据来源　Atlas Academy API　·　Mooncell</div>
-    <div class="l2">版权所有　TYPE-MOON / FGO PROJECT</div>
-  </div>
-  <div class="r">
-    <div class="r1">DESIGN BY MILA</div>
-    <div class="r2">DARK-CHALDEA FRAME ／ v1</div>
-  </div>
+  <div class="l1">数据来源　Atlas Academy API　·　Mooncell　｜　版权所有　TYPE-MOON / FGO PROJECT</div>
 </footer>
 </div></div></body></html>

@@ -42,10 +42,7 @@ def _pick_names(cn: str, jp: str, rank: str = "", lang: str = "zh") -> tuple[str
 
 def _skill_effect(eff: dict) -> str:
     desc, values, fixed = eff.get("desc", ""), eff.get("values"), eff.get("fixed")
-    head = f'<div class="sk-d"><span>{desc}</span>'
-    if values:
-        head += '<span class="tag">Lv.1–10</span>'
-    head += "</div>"
+    head = f'<div class="sk-d"><span>{desc}</span></div>'
 
     if not values:                      # 恒定效果 / 无数值效果：都是通栏单格
         body = fixed if fixed else '<span class="empty">∅</span>'
@@ -138,8 +135,11 @@ def _cw(t: str) -> float:
     return sum(1.0 if ord(c) > 0x2E80 else 0.55 for c in t)
 
 
-def build_traits(data: dict, budget: float = 72.0) -> str:
-    """特性行：能吃到羁绊加成礼装的条件词置顶金色（用 wiki 特性原词），其余灰白跟随，排不下以 … 收尾。"""
+def build_traits(data: dict, budget: float = 88.0) -> str:
+    """特性行：能吃到羁绊加成礼装的条件词置顶金色（用 wiki 特性原词），其余灰白跟随。
+
+    ``budget`` 按「两行」给（一行约 44 个 CJK 字宽，2 行 ≈ 88），排不下以 … 收尾。
+    """
     from .cardkit import bondce
     traits = list(data.get("traits", []))
     if not traits:
@@ -148,13 +148,14 @@ def build_traits(data: dict, budget: float = 72.0) -> str:
     pool = traits + [data["gender"]] if data.get("gender") else traits   # 性别也是礼装条件
     gold, consumed = bondce.fit(no, pool) if no else ([], set())
 
+    limit = budget - 2.5          # 给末尾的 … 留点位置，别让它单独折到第 3 行
     parts, used, truncated = [], 0.0, False
     for w in gold:
         parts.append(("g", w)); used += _cw(w) + 1.8
     for t in traits:
         if t in consumed:
             continue
-        if used + _cw(t) + 1.8 > budget:
+        if used + _cw(t) + 1.8 > limit:
             truncated = True
             break
         parts.append(("", t)); used += _cw(t) + 1.8
@@ -162,7 +163,7 @@ def build_traits(data: dict, budget: float = 72.0) -> str:
     html = "<i>・</i>".join(
         f'<span class="g">{w}</span>' if c == "g" else f"<span>{w}</span>" for c, w in parts)
     if truncated:
-        html += '<i>・</i><span style="color:#5A677D">…</span>'
+        html += '<span class="more">…</span>'
     return html
 
 
@@ -191,9 +192,15 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
 
     # ---- 头部字段全部来自 data（build_data.py 从 fgo-wiki MD 解析）----
     sid = str(data.get("servant_id") or data.get("id") or "")
-    card_icon = {"Quick": "card_Q.png", "Arts": "card_A.png", "Buster": "card_B.png"}
+    card_icon = {
+        "Quick": "card_Q.png", "Arts": "card_A.png", "Buster": "card_B.png",
+        "迅": "card_Q.png", "技": "card_A.png", "力": "card_B.png",
+        "クイック": "card_Q.png", "アーツ": "card_A.png", "バスター": "card_B.png",
+    }
+    # 认不出来的类型宁可不出图，也不要默默退成 Arts（整排变蓝就是这么来的）
     cards_html = "".join(
-        '<img src="../assets/%s">' % card_icon.get(c, "card_A.png") for c in data.get("cards", []))
+        '<img src="../assets/%s">' % card_icon[c]
+        for c in (data.get("cards") or []) if c in card_icon)
     hex_data = list(data.get("hex", []))
     if data.get("npgain"):
         hex_data.append(["NP获得", data["npgain"]])
@@ -207,7 +214,8 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
     rarity = int(data.get("rarity", 5))
     tier = "gold" if rarity >= 4 else ("silver" if rarity == 3 else "bronze")
     for k, v in {
-        "STARS": f"stars_{rarity}_{tier}_glow.png",
+        "STARS": "★" * max(0, min(rarity, 8)),
+        "STAR_TIER": tier,
         "ART_POS": data.get("art_pos", "50% 5%"),
         "LIMITED": data.get("limited", ""),
         "TRAITS": build_traits(data),
@@ -223,6 +231,9 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
         "LEVEL": str(data.get("level", "90")),
         "CARDS": cards_html,
         "HEX": hex_html,
+        "CAMP": data.get("camp") or "—",
+        "ALIGN": data.get("alignment") or "—",
+        "GENDER": data.get("gender") or "—",
         "ARTIST": data.get("artist", ""),
         "CV": data.get("cv", ""),
         "ART": f"art_{sid}.png",
