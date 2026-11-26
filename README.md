@@ -6,6 +6,10 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 
 | 命令 | 说明 |
 |---|---|
+| `fgo<任意词>` | **直接查**：从者（含自定义别名）／礼装／御主衣服，命中多条会列候选 |
+| `fgo别名 添加 <名称> <叫法>` | 自定义别名，之后 `fgo<叫法>` 直接命中；群内共享、插件更新不丢 |
+| `fgo别名` / `fgo别名 删除 <叫法>` | 查看／删除别名 |
+| `fgo御主衣服 <名称>` | 御主衣服（魔术礼装）的技能与冷却 |
 | `fgo从者 [职阶] [星级] <名称>` | **从者卡图**（立绘 + 六维 + 宝具 + 技能数值）；重名用职阶/星级区分（如 `fgo从者 剑 5星 阿尔托莉雅·潘德拉贡`）；无卡片数据/渲染失败时退回文字 |
 | `fgo礼装 <名称>` | **礼装卡**（卡面 + 星级/COST + 未破/满破效果）；无卡面数据时退回文字 |
 | `fgo活动 [关键词]` | **活动日历卡**（横幅 + 时间 + 进行中标记）/ 按名称搜索 |
@@ -33,6 +37,21 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 
 WebP 和 PNG 肉眼几乎无差（手机上看不出），体积只有 1/3.6；若某个客户端显示 WebP 有问题，
 发 `fgo设置画质 高清` 即回 PNG。画质按群/按人记。
+
+### 自定义别名与统一检索
+
+三个维度都能查：**从者（含从者别名）／礼装／御主衣服**。直接发 `fgo<词>` 即可：
+
+```
+fgo摩根            → 从者卡
+fgo宝石翁          → 礼装卡（内置别名）
+fgo迦勒底          → 御主衣服（魔术礼装·迦勒底）
+fgo别名 添加 摩根 老婆    → 以后 fgo老婆 就是摩根
+```
+
+- 别名按群/按人存（`<data>/FGOUID/user_aliases.json`），插件更新不覆盖
+- 同名多命中（如 `fgo阿尔托莉雅`）会列候选 + 可直接复制的精确指令
+- 精确优先级：你的别名 > 内置别名 > 名称完全一致 > 模糊匹配；跨类型时按 从者→礼装→御主衣服
 
 ### 重名从者怎么查
 
@@ -76,6 +95,7 @@ python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki
 python tools/sync_gacha.py --wiki /path/to/fgo-wiki    # 回填卡池 UP/横幅、活动名/横幅
                                                        # 活动横幅依赖 wiki raw/events，缺的可用 Atlas 补抓
 python tools/sync_ce.py --wiki /path/to/fgo-wiki       # 礼装卡面/未破满破效果/ATK·HP
+python tools/sync_mystic.py --wiki /path/to/fgo-wiki    # 御主衣服（魔术礼装）技能表
 python tools/sync_cards.py                            # 从者卡模型（复用 wiki 解析器）
 python tools/sync_bondce.py                           # 羁绊礼装反查表
 ```
@@ -179,7 +199,9 @@ FGOUID/
 ├── core/gacha_card.py     # 卡池日历卡（列表卡）：行模型 → HTML → 渲染 → 缓存
 ├── core/ce_card.py        # 礼装卡：craft_essences + ce_details → HTML → 渲染 → 缓存
 ├── core/event_card.py     # 活动日历卡（列表卡）：横幅 + 时间 + 状态
-├── core/settings.py       # 按群/按人的偏好（出图开关、语言），JSON 落 data/FGOUID
+├── core/settings.py       # 按群/按人的偏好（出图开关、语言、画质），JSON 落 data/FGOUID
+├── core/aliases.py        # 用户自定义别名（从者/礼装/御主衣服），JSON 落 data/FGOUID
+├── core/search.py         # 统一检索：别名 → 从者 → 礼装 → 御主衣服
 ├── core/store.py          # 运行时可写目录
 ├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
 │   ├── build.py           #   数据模型 → HTML（模板填充）

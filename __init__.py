@@ -9,6 +9,8 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
+from .core import aliases as alias_store
+from .core import search as searcher
 from .core.card import render_cards
 from .core.ce_card import get_ce_png, load_details_for
 from .core.event_card import get_event_png, prewarm_banners as prewarm_event_banners
@@ -26,14 +28,6 @@ from .core.settings import (
     quality_of,
     scope_of,
 )
-
-
-CLASS_CN = {
-    "saber": "剑", "archer": "弓", "lancer": "枪", "rider": "骑", "caster": "术",
-    "assassin": "杀", "berserker": "狂", "ruler": "裁", "avenger": "仇",
-    "alterego": "丑", "mooncancer": "月", "foreigner": "外", "pretender": "伪",
-    "shielder": "盾", "beast": "兽",
-}
 
 
 def candidate_text(rows, name: str, limit: int = 8) -> str:
@@ -63,9 +57,13 @@ from .core.prewarm import (
 )
 
 from .core.db import (
+    CLASS_CN,
     find_ce,
+    find_ces,
+    find_mystic_codes,
     find_servant,
     find_servants,
+    format_mystic,
     parse_servant_query,
     format_ce,
     format_events,
@@ -84,11 +82,14 @@ HELP_IMG = Path(__file__).resolve().parent / "assets" / "help.png"
 
 HELP_TEXT = (
     "【FGO 插件】\n"
+    "fgo<任意词> — 直接查从者/礼装/御主衣服\n"
+    "fgo别名 添加 <名称> <叫法> — 自定义别名\n"
     "— 公共信息 —\n"
     "fgo从者 [职阶] <名称> — 从者卡图（重名可加职阶，如 剑 伊吹童子）\n"
     "fgo礼装 <名称> — 概念礼装\n"
     "fgo活动 [关键词] — 活动列表/搜索\n"
     "fgo卡池 [关键词] — 卡池日历/搜索\n"
+    "fgo御主衣服 <名称> — 御主衣服技能\n"
     "— 趣味互动 —\n"
     "fgo今日老婆 — 今天的老婆\n"
     "fgo每日一抽 — 今天的一抽（出货记进图鉴）\n"
@@ -106,6 +107,11 @@ HELP_TEXT = (
 @sv.on_fullmatch("fgo测试", block=True)
 async def fgo_ping(bot: Bot, ev: Event):
     await bot.send("FGOUID 插件链路正常 ✅")
+
+
+@sv.on_fullmatch("fgo", block=True)
+async def fgo_bare(bot: Bot, ev: Event):
+    return await fgo_help(bot, ev)
 
 
 @sv.on_fullmatch("fgo帮助", block=True)
@@ -141,21 +147,10 @@ except Exception as e:  # 老版本 core 没有 register_help 时静默跳过
     logger.debug(f"[FGOUID] register_help 跳过：{e}")
 
 
-@sv.on_command("fgo从者", block=True)
-async def fgo_servant(bot: Bot, ev: Event):
-    name = (ev.text or "").strip()
-    if not name:
-        return await bot.send("用法：fgo从者 <名称>，例如 fgo从者 摩根")
-    rows = find_servants(name)
-    if not rows:
-        return await bot.send(f"未找到从者：{name}（可用「职阶 + 名称」区分重名，如 fgo从者 剑 伊吹童子）")
-    if len(rows) > 1:
-        shown = parse_servant_query(name)[0] or name
-        return await bot.send(candidate_text(rows, shown))
-    row = rows[0]
+async def send_servant_card(bot: Bot, ev: Event, row) -> None:
+    """发从者卡（多模组多张）；出图关闭或渲染失败时回落文字。"""
     if not image_on(ev):
         return await bot.send(format_servant(row))
-    # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字
     try:
         pngs = await render_cards(row["id"], lang=lang_of(ev), quality=quality_of(ev))
     except Exception as e:
@@ -166,14 +161,8 @@ async def fgo_servant(bot: Bot, ev: Event):
     await bot.send(format_servant(row))
 
 
-@sv.on_command("fgo礼装", block=True)
-async def fgo_ce(bot: Bot, ev: Event):
-    name = (ev.text or "").strip()
-    if not name:
-        return await bot.send("用法：fgo礼装 <名称>，例如 fgo礼装 宝石翁")
-    row = find_ce(name)
-    if row is None:
-        return await bot.send(f"未找到礼装：{name}")
+async def send_ce_card(bot: Bot, ev: Event, row) -> None:
+    """发礼装卡；没有卡面数据 / 出图关闭 / 渲染失败时回落文字。"""
     if not image_on(ev):
         return await bot.send(format_ce(row))
     try:
@@ -188,6 +177,52 @@ async def fgo_ce(bot: Bot, ev: Event):
     if png:
         return await bot.send(MessageSegment.image(png))
     await bot.send(format_ce(row))
+
+
+@sv.on_command("fgo从者", block=True)
+async def fgo_servant(bot: Bot, ev: Event):
+    name = (ev.text or "").strip()
+    if not name:
+        return await bot.send("用法：fgo从者 <名称>，例如 fgo从者 摩根")
+    rows = find_servants(name)
+    if not rows:
+        return await bot.send(f"未找到从者：{name}（可用「职阶 + 名称」区分重名，如 fgo从者 剑 伊吹童子）")
+    if len(rows) > 1:
+        shown = parse_servant_query(name)[0] or name
+        return await bot.send(candidate_text(rows, shown))
+    await send_servant_card(bot, ev, rows[0])
+
+
+@sv.on_command("fgo礼装", block=True)
+async def fgo_ce(bot: Bot, ev: Event):
+    name = (ev.text or "").strip()
+    if not name:
+        return await bot.send("用法：fgo礼装 <名称>，例如 fgo礼装 宝石翁")
+    rows = find_ces(name)
+    if not rows:
+        return await bot.send(f"未找到礼装：{name}")
+    if len(rows) > 1:
+        lines = [f"「{name}」有 {len(rows)} 张礼装："]
+        lines += [f"· {searcher.describe_hit('ce', r)}" for r in rows[:8]]
+        lines.append("加关键词再查，或者直接发 fgo<更完整的名称>")
+        return await bot.send("\n".join(lines))
+    await send_ce_card(bot, ev, rows[0])
+
+
+@sv.on_command("fgo御主衣服", block=True)
+async def fgo_mystic(bot: Bot, ev: Event):
+    name = (ev.text or "").strip()
+    if not name:
+        return await bot.send("用法：fgo御主衣服 <名称>，例如 fgo御主衣服 决战用迦勒底制服")
+    rows = find_mystic_codes(name)
+    if not rows:
+        return await bot.send(f"未找到御主衣服：{name}")
+    if len(rows) > 1:
+        lines = [f"「{name}」有 {len(rows)} 件御主衣服："]
+        lines += [f"· {searcher.describe_hit('mystic', r)}" for r in rows[:8]]
+        lines.append("加关键词再查，或者直接发 fgo<更完整的名称>")
+        return await bot.send("\n".join(lines))
+    await bot.send(format_mystic(rows[0]))
 
 
 @sv.on_command("fgo活动", block=True)
@@ -386,3 +421,152 @@ try:
         asyncio.create_task(_startup_prewarm())
 except Exception as e:  # 老版本 core 没有这个钩子就跳过
     logger.debug(f"[FGOUID] on_core_start 不可用：{e}")
+
+
+# ---------------------------------------------------------------- 别名 / 统一检索
+TYPE_WORDS = {
+    "从者": "servant", "servant": "servant",
+    "礼装": "ce", "ce": "ce", "概念礼装": "ce",
+    "御主衣服": "mystic", "mystic": "mystic", "魔术礼装": "mystic", "衣服": "mystic",
+}
+
+# 「fgo<词>」这种裸查询要避开的内置指令，否则会跟专门的命令抢
+KNOWN_SUBCOMMANDS = (
+    "从者", "礼装", "活动", "卡池", "御主衣服", "测试", "帮助", "今日老婆", "老婆",
+    "每日一抽", "一抽", "抽卡", "图鉴", "下载资源", "设置", "别名",
+)
+
+
+def _entity_rows(etype: str, rows) -> str:
+    """跨类型/多候选时列候选。"""
+    lines = []
+    for etype_one, rows_one in rows:
+        for r in rows_one[:5]:
+            lines.append(f"· {searcher.describe_hit(etype_one, r)} → {searcher.hint_for(etype_one, r)}")
+        if len(rows_one) > 5:
+            lines.append(f"  （{searcher.TYPE_CN.get(etype_one, etype_one)}还有 {len(rows_one) - 5} 条，加关键词再查）")
+    return "\n".join(lines)
+
+
+async def _reply_matches(bot: Bot, ev: Event, query: str, matches) -> None:
+    if len(matches) == 1:
+        etype, rows = matches[0]
+        if etype == "servant":
+            if len(rows) > 1:
+                shown = parse_servant_query(query)[0] or query
+                return await bot.send(candidate_text(rows, shown))
+            return await send_servant_card(bot, ev, rows[0])
+        if etype == "ce":
+            if len(rows) > 1:
+                lines = [f"「{query}」有 {len(rows)} 张礼装："]
+                lines += [f"· {searcher.describe_hit('ce', r)} → {searcher.hint_for('ce', r)}" for r in rows[:8]]
+                return await bot.send("\n".join(lines))
+            return await send_ce_card(bot, ev, rows[0])
+        # 御主衣服：先出文字（卡片版式以后再做）
+        if len(rows) > 1:
+            lines = [f"「{query}」有 {len(rows)} 件御主衣服："]
+            lines += [f"· {searcher.describe_hit('mystic', r)} → {searcher.hint_for('mystic', r)}" for r in rows[:8]]
+            return await bot.send("\n".join(lines))
+        return await bot.send(format_mystic(rows[0]))
+
+    total = sum(len(r) for _, r in matches)
+    types = "、".join(searcher.TYPE_CN.get(t, t) for t, _ in matches)
+    head = f"「{query}」匹配到 {total} 条（{types}），用指令收窄："
+    await bot.send(head + "\n" + _entity_rows("", matches))
+
+
+@sv.on_prefix("fgo", block=False)
+async def fgo_any(bot: Bot, ev: Event):
+    """fgo<任意词>：从者（含用户别名）/ 礼装 / 御主衣服 统一检索。
+
+    内置指令（fgo从者、fgo活动…）有各自的 handler，这里遇到就跳过，
+    避免同一条消息被回两遍。
+    """
+    text = (ev.text or "").strip()
+    if not text or text.startswith(KNOWN_SUBCOMMANDS):
+        return
+    # 去掉可能残留的空格/标点
+    query = text.strip(" 　·・,，。")
+    if not query:
+        return
+    matches = searcher.resolve(query, scope_of(ev))
+    if not matches:
+        return await bot.send(
+            f"没找到「{query}」\n"
+            "· 查从者：fgo从者 <名称>　· 查礼装：fgo礼装 <名称>　· 查御主衣服：fgo御主衣服 <名称>\n"
+            "· 想给它起个短名：fgo别名 添加 <名称> <你的叫法>"
+        )
+    await _reply_matches(bot, ev, query, matches)
+
+
+@sv.on_command("fgo别名", block=True)
+async def fgo_alias(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    scope = scope_of(ev)
+    if not arg or arg in ("列表", "list", "ls"):
+        return await bot.send(alias_store.describe(alias_store.list_of(scope)))
+
+    parts = arg.split()
+    action = parts[0]
+    rest = parts[1:]
+
+    if action in ("添加", "add", "加"):
+        if len(rest) < 2:
+            return await bot.send(
+                "用法：fgo别名 添加 <名称> <你的叫法>\n"
+                "例：fgo别名 添加 摩根 老婆\n"
+                "重名时先在前面写类型：fgo别名 添加 礼装 万华镜 宝石爷"
+            )
+        etype = None
+        if rest[0] in TYPE_WORDS and len(rest) >= 3:
+            etype = TYPE_WORDS[rest[0]]
+            rest = rest[1:]
+        alias = rest[-1]
+        target = " ".join(rest[:-1]).strip()
+
+        matches = searcher.resolve(target, scope)
+        if etype:
+            matches = [(t, rows) for t, rows in matches if t == etype]
+        if not matches:
+            return await bot.send(f"没找到「{target}」，先在前面加上类型试试（从者/礼装/御主衣服）")
+        total = sum(len(rows) for _, rows in matches)
+        if total > 1:
+            lines = [f"「{target}」有 {total} 个候选，请写清楚是哪一个（可在前面加类型）："]
+            lines += [f"· {searcher.describe_hit(t, r)}" for t, rows in matches for r in rows[:5]]
+            return await bot.send("\n".join(lines))
+
+        etype_one, rows_one = matches[0]
+        row = rows_one[0]
+        name = searcher.entity_name(etype_one, row)
+        eid = str(row["id"])
+        status = alias_store.add(scope, alias, etype_one, eid, name, by=ev.user_id)
+        if status == "reserved":
+            return await bot.send(f"「{alias}」是内置指令词，换一个吧")
+        if status == "bad":
+            return await bot.send("别名不能为空，且不超过 20 个字")
+        if status == "exists":
+            return await bot.send(f"「{alias}」已经指向 {searcher.TYPE_CN[etype_one]}「{name}」了")
+        if status == "conflict":
+            return await bot.send(
+                f"「{alias}」已经被别的条目占用了，先发「fgo别名 删除 {alias}」再添加"
+            )
+        where = "本群" if scope.startswith("g:") else "你"
+        return await bot.send(
+            f"已记住：{where}发「{alias}」= {searcher.TYPE_CN[etype_one]}「{name}」✅\n"
+            f"以后直接发 fgo{alias} 就行"
+        )
+
+    if action in ("删除", "del", "删", "移除"):
+        if not rest:
+            return await bot.send("用法：fgo别名 删除 <你的叫法>")
+        removed = alias_store.remove(scope, rest[0])
+        if not removed:
+            return await bot.send(f"没找到别名「{rest[0]}」")
+        return await bot.send(f"已删除别名「{removed['alias']}」")
+
+    return await bot.send(
+        "别名用法：\n"
+        "· fgo别名 添加 <名称> <你的叫法>\n"
+        "· fgo别名 删除 <你的叫法>\n"
+        "· fgo别名 — 看当前有哪些别名"
+    )

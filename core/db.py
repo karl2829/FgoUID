@@ -34,6 +34,14 @@ def _conn() -> sqlite3.Connection:
 
 
 
+# 职阶 → 中文短名（展示用）
+CLASS_CN = {
+    "saber": "剑", "archer": "弓", "lancer": "枪", "rider": "骑", "caster": "术",
+    "assassin": "杀", "berserker": "狂", "ruler": "裁", "avenger": "仇",
+    "alterego": "丑", "mooncancer": "月", "foreigner": "外", "pretender": "伪",
+    "shielder": "盾", "beast": "兽",
+}
+
 # 职阶别名：中文 / 英文 / 日文都认，长的优先匹配（「アルターエゴ」不能被「エゴ」抢）
 CLASS_TOKENS: list[tuple[str, str]] = sorted({
     ("saber", "saber"), ("剑", "saber"), ("剑士", "saber"), ("剑阶", "saber"),
@@ -307,3 +315,139 @@ def format_gacha(rows) -> str:
         if r["up_servants"]:
             out.append(f"  UP：{r['up_servants'][:120]}")
     return "\n".join(out)
+
+
+# ---------------------------------------------------------------- 礼装 / 御主衣服
+def find_ces(query: str, limit: int = 12) -> list:
+    """礼装查询：返回全部候选（同名礼装不再只取第一条）。"""
+    q = _resolve(query).strip()
+    if not q:
+        return []
+    con = _conn()
+    try:
+        rows = con.execute(
+            """SELECT DISTINCT t.* FROM craft_essences t
+                WHERE t.id IN (SELECT entity_id FROM aliases
+                                WHERE alias = ? AND entity_type = 'ce')
+             ORDER BY CASE t.region WHEN 'CN' THEN 0 ELSE 1 END""",
+            (q,),
+        ).fetchall()
+        if rows:
+            return _dedupe(rows)
+        seen, out = set(), []
+        for pattern in (q, f"{q}%", f"%{q}%"):
+            rows = con.execute(
+                """SELECT * FROM craft_essences WHERE name LIKE ?
+                 ORDER BY CASE region WHEN 'CN' THEN 0 ELSE 1 END LIMIT ?""",
+                (pattern, limit),
+            ).fetchall()
+            for r in _dedupe(rows):
+                if r["id"] in seen:
+                    continue
+                seen.add(r["id"])
+                out.append(r)
+            if len(out) >= limit:
+                break
+        return out[:limit]
+    finally:
+        con.close()
+
+
+def find_mystic_codes(query: str, limit: int = 12) -> list:
+    """御主衣服（魔术礼装）查询：别名 → 名称/日文名包含。"""
+    q = _resolve(query).strip()
+    if not q:
+        return []
+    con = _conn()
+    try:
+        rows = con.execute(
+            """SELECT DISTINCT t.* FROM mystic_codes t
+                WHERE t.id IN (SELECT entity_id FROM aliases
+                                WHERE alias = ? AND entity_type = 'mystic')
+             ORDER BY CAST(t.id AS INTEGER)""",
+            (q,),
+        ).fetchall()
+        if rows:
+            return list(rows)
+        # 名称大多以「魔术礼装·」开头，只按前缀会漏掉一多半 → 前缀 + 包含合并
+        seen, out = set(), []
+        for pattern in (q, f"{q}%", f"%{q}%"):
+            rows = con.execute(
+                """SELECT * FROM mystic_codes
+                    WHERE name LIKE ? OR name_jp LIKE ?
+                 ORDER BY CAST(id AS INTEGER) LIMIT ?""",
+                (pattern, pattern, limit),
+            ).fetchall()
+            for r in rows:
+                if r["id"] in seen:
+                    continue
+                seen.add(r["id"])
+                out.append(r)
+            if len(out) >= limit:
+                break
+        return out[:limit]
+    finally:
+        con.close()
+
+
+def _fmt_cd(cd: str) -> str:
+    """冷却 15→15→…→13 压成「15 → 13」。"""
+    parts = [p.strip() for p in (cd or "").split("→") if p.strip()]
+    if not parts:
+        return "—"
+    return parts[0] if len(parts) == 1 or parts[0] == parts[-1] else f"{parts[0]} → {parts[-1]}"
+
+
+def format_mystic(row) -> str:
+    import json as _json
+
+    keys = row.keys()
+    skills = []
+    try:
+        skills = _json.loads(row["skills"] or "[]")
+    except Exception:
+        skills = []
+    lines = [f"【御主衣服】{row['name']}"]
+    extra = []
+    if "name_jp" in keys and row["name_jp"] and row["name_jp"] != row["name"]:
+        extra.append(row["name_jp"])
+    if "lv_max" in keys and row["lv_max"]:
+        extra.append(f"Lv.{row['lv_max']}")
+    if extra:
+        lines.append("　".join(extra))
+    for sk in skills:
+        lines.append(f"· {sk.get('name', '')}｜{sk.get('effect', '')}")
+        lines.append(f"  冷却 {_fmt_cd(sk.get('cd', ''))}")
+    if "detail" in keys and row["detail"]:
+        lines.append(f"（{row['detail']}）")
+    return "\n".join(lines)
+
+
+def alias_types(query: str) -> set[str]:
+    """查询词在内置别名表里精确命中的实体类型集合（servant / ce / mystic）。"""
+    q = _resolve(query).strip()
+    if not q:
+        return set()
+    con = _conn()
+    try:
+        rows = con.execute(
+            "SELECT DISTINCT entity_type FROM aliases WHERE alias = ?", (q,)
+        ).fetchall()
+        return {r[0] for r in rows if r[0]}
+    finally:
+        con.close()
+
+
+def load_entity(etype: str, eid: str) -> dict | None:
+    """按类型 + ID 取一行（别名解析用）。"""
+    table = {"servant": "servants", "ce": "craft_essences", "mystic": "mystic_codes"}.get(etype)
+    if not table:
+        return None
+    con = _conn()
+    try:
+        row = con.execute(
+            f"SELECT * FROM {table} WHERE id = ? ORDER BY 1 LIMIT 1", (str(eid),)
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        con.close()
