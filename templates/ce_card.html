@@ -8,8 +8,8 @@
   --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-dark:#A8862F; --gold-deep:#8A6E1A;
   --metal-ring:linear-gradient(128deg,#6E5620 0%,#C9A227 9%,#F8EDCB 19%,#E8C877 31%,
                #A8862F 47%,#C9A227 63%,#F5E3AE 79%,#8A6E1A 93%,#C9A227 100%);
-  --rule:linear-gradient(90deg,rgba(201,162,39,0) 0%,var(--g60) 10%,
-         rgba(245,227,174,.78) 50%,var(--g60) 90%,rgba(201,162,39,0) 100%);
+  --rule:linear-gradient(90deg,rgba(201,162,39,0) 0%,var(--g32) 10%,
+         rgba(245,227,174,.42) 50%,var(--g32) 90%,rgba(201,162,39,0) 100%);
 
   /* 金色透明度阶梯：收敛散落的 rgba(201,162,39,.xx) */
   --g06:var(--g06); --g10:var(--g10); --g12:var(--g12);
@@ -26,8 +26,8 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
      -webkit-font-smoothing:antialiased;color:var(--text-1);background:#080d15}
 
 .card{width:1080px;padding:1.5px;border-radius:22px;background:var(--metal-ring);
-  box-shadow:0 0 0 1px rgba(227,195,107,.22), 0 0 18px rgba(227,195,107,.30),
-             0 0 56px rgba(227,195,107,.16), 0 26px 70px rgba(0,0,0,.66)}
+  box-shadow:0 0 0 1px rgba(227,195,107,.16), 0 0 32px rgba(227,195,107,.10),
+             0 26px 70px rgba(0,0,0,.66)}
 .inner{position:relative;width:100%;border-radius:20.5px;overflow:hidden;
   background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08),
@@ -38,7 +38,7 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
              rgba(255,255,255,.14) 48%,rgba(255,255,255,0) 74%)}
 .sheen{position:absolute;left:-10%;right:-10%;top:-14%;height:40%;pointer-events:none;
   background:radial-gradient(112% 70% at 26% -8%,rgba(201,162,39,.15),rgba(201,162,39,0) 62%)}
-.corner{position:absolute;width:34px;height:34px;z-index:6;pointer-events:none;opacity:.85}
+.corner{position:absolute;width:34px;height:34px;z-index:6;pointer-events:none;opacity:.45}
 .corner.tl{left:14px;top:14px;border-left:1.5px solid var(--gold);border-top:1.5px solid var(--gold);border-radius:4px 0 0 0}
 .corner.tr{right:14px;top:14px;border-right:1.5px solid var(--gold);border-top:1.5px solid var(--gold);border-radius:0 4px 0 0}
 .corner.bl{left:14px;bottom:14px;border-left:1.5px solid var(--gold);border-bottom:1.5px solid var(--gold);border-radius:0 0 0 4px}
