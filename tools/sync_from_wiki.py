@@ -97,6 +97,7 @@ def build(wiki: Path, out_db: Path) -> dict:
     DROP TABLE IF EXISTS craft_essences;
     DROP TABLE IF EXISTS events;
     DROP TABLE IF EXISTS gacha;
+    DROP TABLE IF EXISTS ce_details;    -- 由 tools/sync_ce.py 重建
     DROP TABLE IF EXISTS aliases;
     CREATE TABLE servants(
         id TEXT, region TEXT, name TEXT, name_jp TEXT, aliases TEXT,

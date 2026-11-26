@@ -10,6 +10,7 @@ from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_cards
+from .core.ce_card import get_ce_png, load_details_for
 from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
@@ -122,6 +123,16 @@ async def fgo_ce(bot: Bot, ev: Event):
     row = find_ce(name)
     if row is None:
         return await bot.send(f"未找到礼装：{name}")
+    try:
+        png = await asyncio.wait_for(get_ce_png(dict(row), load_details_for(row)), timeout=45)
+    except asyncio.TimeoutError:
+        logger.info("[FGOUID] 礼装卡首次渲染超时，先发文字版")
+        return await bot.send(format_ce(row) + "\n（礼装卡首次生成要下图，稍后再发一次就有图了）")
+    except Exception as e:
+        logger.warning(f"[FGOUID] 礼装卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
     await bot.send(format_ce(row))
 
 

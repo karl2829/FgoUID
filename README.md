@@ -7,7 +7,7 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 | 命令 | 说明 |
 |---|---|
 | `fgo从者 <名称>` | **从者卡图**（立绘 + 六维 + 宝具 + 技能数值）；无卡片数据/渲染失败时退回文字 |
-| `fgo礼装 <名称>` | 概念礼装（稀有度/COST/类型/效果） |
+| `fgo礼装 <名称>` | **礼装卡**（卡面 + 星级/COST + 未破/满破效果）；无卡面数据时退回文字 |
 | `fgo活动 [关键词]` | 未来活动，无则最近活动 |
 | `fgo卡池 [关键词]` | **卡池日历卡**（横幅 + 时间 + UP 从者）/ 按名称搜索 |
 | `fgo今日老婆` | 今天的老婆（按 ID + 日期定种子，每天换人） |
@@ -44,6 +44,7 @@ git clone <本仓库地址> FGOUID
 ```bash
 python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki
 python tools/sync_gacha.py --wiki /path/to/fgo-wiki    # 回填卡池 UP/横幅、活动名/横幅
+python tools/sync_ce.py --wiki /path/to/fgo-wiki       # 礼装卡面/未破满破效果/ATK·HP
 python tools/sync_cards.py                            # 从者卡模型（复用 wiki 解析器）
 python tools/sync_bondce.py                           # 羁绊礼装反查表
 ```
@@ -145,6 +146,7 @@ FGOUID/
 ├── core/help_card.py      # 帮助卡模型 → HTML 投影 + 缓存
 ├── core/card.py           # 从者卡：模型 → 素材 → 渲染 → 缓存
 ├── core/gacha_card.py     # 卡池日历卡（列表卡）：行模型 → HTML → 渲染 → 缓存
+├── core/ce_card.py        # 礼装卡：craft_essences + ce_details → HTML → 渲染 → 缓存
 ├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
 │   ├── build.py           #   数据模型 → HTML（模板填充）
 │   ├── fetch.py           #   立绘/羁绊礼装/技能图标按需下载 + 缓存
@@ -159,6 +161,7 @@ FGOUID/
 ├── assets/emblem.png      # 迦勒底徽记
 ├── templates/help_card.html   # 帮助卡外框 + CSS，正文由模型投影
 ├── templates/list_card.html   # 列表卡外框 + CSS（卡池/活动共用）
+├── templates/ce_card.html     # 礼装卡版式（左卡面右信息）
 └── tools/
     ├── sync_from_wiki.py  # wiki → db
     └── render_help.py     # 生成降级用 assets/help.png（仅开发机）
