@@ -34,16 +34,18 @@ CLASS_CN = {
 }
 
 
-def candidate_text(rows, name: str) -> str:
+def candidate_text(rows, name: str, limit: int = 8) -> str:
     """重名从者：列候选 + 教用户怎么用职阶/星级精确查。"""
     lines = [f"「{name}」有 {len(rows)} 位，用「职阶 + 名称」区分："]
-    for r in rows:
+    for r in rows[:limit]:
         klass = (r["servant_class"] or "").lower()
         cn = CLASS_CN.get(klass, klass)
         stars = "★" * int(r["rarity"] or 0)
-        lines.append(f"· {klass.capitalize()}（{cn}）{stars} → fgo从者 {cn} {name}")
-    if len({(r["servant_class"] or "").lower() for r in rows}) < len(rows):
-        lines.append("同职阶重名时再加星级，例如：fgo从者 剑 5星 " + name)
+        star_n = int(r["rarity"] or 0)
+        lines.append(f"· {klass.capitalize()}（{cn}）{stars} → fgo从者 {cn} {star_n}星 {r['name']}")
+    if len(rows) > limit:
+        lines.append(f"……还有 {len(rows) - limit} 位，加关键词再查")
+    lines.append("提示：职阶后面也能加星级，例如 fgo从者 剑 5星 阿尔托莉雅·潘德拉贡")
     return "\n".join(lines)
 
 
@@ -62,6 +64,7 @@ from .core.db import (
     find_ce,
     find_servant,
     find_servants,
+    parse_servant_query,
     format_ce,
     format_events,
     format_gacha,
@@ -145,7 +148,8 @@ async def fgo_servant(bot: Bot, ev: Event):
     if not rows:
         return await bot.send(f"未找到从者：{name}（可用「职阶 + 名称」区分重名，如 fgo从者 剑 伊吹童子）")
     if len(rows) > 1:
-        return await bot.send(candidate_text(rows, name))
+        shown = parse_servant_query(name)[0] or name
+        return await bot.send(candidate_text(rows, shown))
     row = rows[0]
     if not image_on(ev):
         return await bot.send(format_servant(row))

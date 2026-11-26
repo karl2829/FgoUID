@@ -88,6 +88,11 @@ def _parse_servant_query(query: str) -> tuple[str, str | None, int | None]:
     return q, cls, star
 
 
+def parse_servant_query(query: str) -> tuple[str, str | None, int | None]:
+    """对外暴露的查询解析（名字 / 职阶 / 星级）。"""
+    return _parse_servant_query(_resolve(query))
+
+
 def _search_rows(con, query: str, limit: int = 12):
     """先精确别名，再前缀/包含匹配；同一名字的多条都返回（不要 LIMIT 1）。"""
     q = (query or "").strip()
