@@ -180,7 +180,8 @@ def build_traits(data: dict, budget: float = 88.0) -> str:
             break
         parts.append(("", t)); used += _cw(t) + 1.8
 
-    html = "<i>・</i>".join(
+    # 用 U+00B7（中点）而不是 U+30FB：后者在部分中文字体里缺字，服务器上会显示成空白
+    html = "<i>·</i>".join(
         f'<span class="g">{w}</span>' if c == "g" else f"<span>{w}</span>" for c, w in parts)
     if truncated:
         html += '<span class="more">…</span>'
