@@ -9,7 +9,7 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 | `fgo从者 <名称>` | **从者卡图**（立绘 + 六维 + 宝具 + 技能数值）；无卡片数据/渲染失败时退回文字 |
 | `fgo礼装 <名称>` | 概念礼装（稀有度/COST/类型/效果） |
 | `fgo活动 [关键词]` | 未来活动，无则最近活动 |
-| `fgo卡池 [关键词]` | 近期卡池日历 / 按名称搜索 |
+| `fgo卡池 [关键词]` | **卡池日历卡**（横幅 + 时间 + UP 从者）/ 按名称搜索 |
 | `fgo今日老婆` | 今天的老婆（按 ID + 日期定种子，每天换人） |
 | `fgo每日一抽` | 每天一抽（同一天结果固定），出货记进图鉴 |
 | `fgo图鉴` | 收集进度：已收集多少从者、星级分布、最近几抽 |
@@ -144,6 +144,7 @@ FGOUID/
 ├── core/render.py         # 服务器端 pytakumi 渲染（并发/字体/裁边）
 ├── core/help_card.py      # 帮助卡模型 → HTML 投影 + 缓存
 ├── core/card.py           # 从者卡：模型 → 素材 → 渲染 → 缓存
+├── core/gacha_card.py     # 卡池日历卡（列表卡）：行模型 → HTML → 渲染 → 缓存
 ├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
 │   ├── build.py           #   数据模型 → HTML（模板填充）
 │   ├── fetch.py           #   立绘/羁绊礼装/技能图标按需下载 + 缓存
@@ -156,7 +157,8 @@ FGOUID/
 ├── overrides/aliases.json # 别名覆盖
 ├── assets/help.png        # 降级用预渲染图
 ├── assets/emblem.png      # 迦勒底徽记
-├── templates/help_card.html   # 外框 + CSS，正文由模型投影
+├── templates/help_card.html   # 帮助卡外框 + CSS，正文由模型投影
+├── templates/list_card.html   # 列表卡外框 + CSS（卡池/活动共用）
 └── tools/
     ├── sync_from_wiki.py  # wiki → db
     └── render_help.py     # 生成降级用 assets/help.png（仅开发机）

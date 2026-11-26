@@ -10,6 +10,7 @@ from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_cards
+from .core.gacha_card import get_gacha_png
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
 from .core.play import draw, format_draw, format_stats, stats
@@ -133,7 +134,15 @@ async def fgo_event(bot: Bot, ev: Event):
 @sv.on_command("fgo卡池", block=True)
 async def fgo_gacha(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
-    await bot.send(format_gacha(list_gacha(kw)))
+    rows = list_gacha(kw)
+    try:
+        png = await get_gacha_png(rows, kw)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 卡池卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(format_gacha(rows))
 
 
 @sv.on_fullmatch(("fgo今日老婆", "今日老婆", "fgo老婆"), block=True)

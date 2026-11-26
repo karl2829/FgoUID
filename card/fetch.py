@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -54,13 +55,18 @@ def _url_for(name: str, data: dict) -> str:
     return ""
 
 
+def _quote_url(url: str) -> str:
+    """Atlas/jsdelivr 的路径里有中文和全角符号，urllib 只吃 ASCII。"""
+    return urllib.parse.quote(url, safe=":/?=@&%~+,;[]!$&'()*")
+
+
 def _download(url: str, dest: Path, timeout: int = 20) -> bool:
     if not url:
         return False
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     try:
-        req = urllib.request.Request(url, headers=UA)
+        req = urllib.request.Request(_quote_url(url), headers=UA)
         with urllib.request.urlopen(req, timeout=timeout) as r:
             tmp.write_bytes(r.read())
         tmp.replace(dest)
@@ -135,6 +141,40 @@ def extra_images(data: dict, names: list[str], workers: int = 4) -> dict[str, by
         if (BUNDLED / name).is_file():
             continue  # 随包素材由 collect_images 自己读盘
         blob = ensure(name, data)
+        if blob:
+            out[f"../assets/{name}"] = blob
+    return out
+
+
+def ensure_remote(name: str, url: str, timeout: int = 25) -> bytes | None:
+    """按名字 + 外链取图（卡池横幅这类不属于立绘/技能图标的素材）。
+
+    URL 里带中文，所以统一 quote；缓存与立绘共用 ``data/FGOUID/art``，
+    同样吃 300MB 上限的 LRU。
+    """
+    if not url:
+        return None
+    cached = cache_dir() / name
+    if cached.is_file():
+        return cached.read_bytes()
+    if _download(url, cached, timeout=timeout):
+        _evict_if_needed()
+        return cached.read_bytes()
+    return None
+
+
+def remote_images(mapping: dict[str, str], workers: int = 4) -> dict[str, bytes]:
+    """{缓存名: 外链} → {``../assets/<缓存名>``: bytes}，并发下载。"""
+    from concurrent.futures import ThreadPoolExecutor
+
+    want = [(n, u) for n, u in mapping.items() if u and not (cache_dir() / n).is_file()]
+    if want:
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            list(ex.map(lambda kv: ensure_remote(*kv), want))
+
+    out: dict[str, bytes] = {}
+    for name, url in mapping.items():
+        blob = ensure_remote(name, url) if url else None
         if blob:
             out[f"../assets/{name}"] = blob
     return out

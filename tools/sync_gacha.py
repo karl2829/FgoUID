@@ -34,6 +34,17 @@ def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", (text or "").replace("\n", " ")).strip()
 
 
+# wiki MD 里偶尔会写「（从者列表待 Mooncell 模拟器补充）：共 0 骑」这类占位文案，
+# 回填时清掉，别让卡片上出现这种句子。
+_PLACEHOLDER = re.compile(r"[（(][^）)]*(待[^）)]*补充|模拟器补充|共\s*0\s*骑)[^）)]*[）)]|共\s*0\s*骑")
+
+
+def _clean_up(text: str) -> str:
+    text = _PLACEHOLDER.sub("", text or "")
+    text = re.sub(r"\s*/\s*(?=/)|^\s*/\s*|\s*/\s*$", "", text)
+    return re.sub(r"\s+", " ", text).strip(" /")
+
+
 def _ensure_columns(con: sqlite3.Connection) -> None:
     """老库也要能补（sync_from_wiki 重建成新 schema 后这里是空操作）。"""
     cols = {
@@ -80,7 +91,7 @@ def enrich_gacha(wiki: Path, con: sqlite3.Connection, dry_run: bool) -> dict:
         if not item:
             continue
         ids, names = _servant_names(con, item.get("servant_ids"))
-        new_up = " / ".join(names) if names else (up or "")
+        new_up = " / ".join(names) if names else _clean_up(up or "")
         if names:
             up_filled += 1
         banner = item.get("banner") or ""
