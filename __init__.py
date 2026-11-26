@@ -17,6 +17,7 @@ from .core.event_card import get_event_png, prewarm_banners as prewarm_event_ban
 from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
+from .core.mystic_card import get_mystic_png
 from .core.play import draw, format_draw, format_stats, stats
 from .core.settings import (
     all_of,
@@ -164,6 +165,23 @@ async def send_servant_card(bot: Bot, ev: Event, row) -> None:
     await bot.send(format_servant(row))
 
 
+async def send_mystic_card(bot: Bot, ev: Event, row) -> None:
+    """御主衣服卡；出图关闭 / 渲染失败时回落文字。"""
+    if not image_on(ev):
+        return await bot.send(format_mystic(row))
+    try:
+        png = await asyncio.wait_for(get_mystic_png(row, quality_of(ev)), timeout=40)
+    except asyncio.TimeoutError:
+        logger.info("[FGOUID] 御主衣服卡首次渲染超时，先发文字版")
+        return await bot.send(format_mystic(row) + "\n（首次生成要下图，稍后再发一次就有图了）")
+    except Exception as e:
+        logger.warning(f"[FGOUID] 御主衣服卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(format_mystic(row))
+
+
 async def send_ce_card(bot: Bot, ev: Event, row) -> None:
     """发礼装卡；没有卡面数据 / 出图关闭 / 渲染失败时回落文字。"""
     if not image_on(ev):
@@ -225,7 +243,7 @@ async def fgo_mystic(bot: Bot, ev: Event):
         lines += [f"· {searcher.describe_hit('mystic', r)}" for r in rows[:8]]
         lines.append("加关键词再查，或者直接发 fgo<更完整的名称>")
         return await bot.send("\n".join(lines))
-    await bot.send(format_mystic(rows[0]))
+    await send_mystic_card(bot, ev, rows[0])
 
 
 @sv.on_command("fgo活动", block=True)
@@ -479,12 +497,11 @@ async def _reply_matches(bot: Bot, ev: Event, query: str, matches) -> None:
                 lines += [f"· {searcher.describe_hit('ce', r)} → {searcher.hint_for('ce', r)}" for r in rows[:8]]
                 return await bot.send("\n".join(lines))
             return await send_ce_card(bot, ev, rows[0])
-        # 御主衣服：先出文字（卡片版式以后再做）
         if len(rows) > 1:
             lines = [f"「{query}」有 {len(rows)} 件御主衣服："]
             lines += [f"· {searcher.describe_hit('mystic', r)} → {searcher.hint_for('mystic', r)}" for r in rows[:8]]
             return await bot.send("\n".join(lines))
-        return await bot.send(format_mystic(rows[0]))
+        return await send_mystic_card(bot, ev, rows[0])
 
     total = sum(len(r) for _, r in matches)
     types = "、".join(searcher.TYPE_CN.get(t, t) for t, _ in matches)

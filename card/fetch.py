@@ -48,6 +48,10 @@ def cache_dir() -> Path:
 def _url_for(name: str, data: dict) -> str:
     if name.startswith("art_"):
         return data.get("art_url") or ""
+    if name.startswith("mc_icon_"):
+        return data.get("icon_url") or ""
+    if name.startswith("mc_fig_"):
+        return data.get("figure_url") or ""
     if name.startswith("bond_ce_"):
         return (data.get("bond") or {}).get("img_url") or ""
     if name.startswith("skill_"):
