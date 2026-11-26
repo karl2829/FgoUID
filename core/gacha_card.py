@@ -164,6 +164,13 @@ async def prewarm_banners(limit: int = 12) -> int:
     if not mapping:
         return 0
     got = await asyncio.to_thread(card_fetch.remote_images, mapping)
+    missing = [n for n in mapping if n not in got]
+    from gsuid_core.logger import logger
+
+    if missing:
+        logger.info(f"[FGOUID] 卡池横幅预热 {len(got)}/{len(mapping)}，缺 {len(missing)} 张（下次再试）")
+    else:
+        logger.info(f"[FGOUID] 卡池横幅预热完成：{len(got)} 张")
     return len(got)
 
 
