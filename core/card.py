@@ -49,8 +49,9 @@ def _template_sig() -> str:
     return _TPL_SIG
 
 
-def _card_cache_key(model: dict, lang: str = "zh") -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + "|" + lang + "|" + _template_sig()
+def _card_cache_key(model: dict, lang: str = "zh", quality: str = "hd") -> str:
+    blob = (json.dumps(model, ensure_ascii=False, sort_keys=True) + "|" + lang
+            + "|" + quality + "|" + _template_sig())
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
@@ -96,7 +97,7 @@ def split_modules(model: dict) -> list[dict]:
     return out
 
 
-async def render_cards(servant_id: str, lang: str = "zh") -> list[bytes]:
+async def render_cards(servant_id: str, lang: str = "zh", quality: str = "hd") -> list[bytes]:
     """渲染某从者的卡图（多模组时返回多张）。lang=jp 时名称用日文名主显。"""
     if not render.available():
         return []
@@ -106,18 +107,19 @@ async def render_cards(servant_id: str, lang: str = "zh") -> list[bytes]:
 
     variants = split_modules(model)
     if len(variants) == 1:
-        one = await render_card_from_model(servant_id, model, lang=lang)
+        one = await render_card_from_model(servant_id, model, lang=lang, quality=quality)
         return [one] if one else []
-    return [p for p in [await render_card_from_model(servant_id, v, suffix=f"_m{v['_module_no']}", lang=lang)
+    return [p for p in [await render_card_from_model(servant_id, v, suffix=f"_m{v['_module_no']}",
+                                                     lang=lang, quality=quality)
                         for v in variants] if p]
 
 
 async def render_card_from_model(servant_id: str, model: dict, suffix: str = "",
-                                 lang: str = "zh") -> bytes | None:
+                                 lang: str = "zh", quality: str = "hd") -> bytes | None:
     if not render.available():
         return None
-    key = _card_cache_key(model, lang)
-    path = cache_dir() / f"{servant_id}{suffix}_{key}.png"
+    key = _card_cache_key(model, lang, quality)
+    path = cache_dir() / f"{servant_id}{suffix}_{key}.img"
     if path.is_file():
         return path.read_bytes()
 
@@ -126,10 +128,10 @@ async def render_card_from_model(servant_id: str, model: dict, suffix: str = "",
     html = build.build_html(model, lang=lang)
     names = build.assets_used(html)
     extra = await asyncio.to_thread(fetch.extra_images, model, names)
-    png = await render.render_png(html, CARD / "templates", extra_images=extra)
+    png = await render.render_png(html, CARD / "templates", extra_images=extra, quality=quality)
     try:
         path.write_bytes(png)
-        for stale in path.parent.glob(f"{servant_id}{suffix}_*.png"):
+        for stale in path.parent.glob(f"{servant_id}{suffix}_*.img"):
             if stale.name != path.name:
                 stale.unlink(missing_ok=True)
     except Exception:
@@ -137,7 +139,7 @@ async def render_card_from_model(servant_id: str, model: dict, suffix: str = "",
     return png
 
 
-async def render_card(servant_id: str, lang: str = "zh") -> bytes | None:
+async def render_card(servant_id: str, lang: str = "zh", quality: str = "hd") -> bytes | None:
     """渲染某从者的卡图；无卡片数据或渲染器不可用时返回 None（调用方降级成文字）。"""
     if not render.available():
         return None
@@ -145,8 +147,8 @@ async def render_card(servant_id: str, lang: str = "zh") -> bytes | None:
     if model is None:
         return None
 
-    key = _card_cache_key(model, lang)
-    path = cache_dir() / f"{servant_id}_{key}.png"
+    key = _card_cache_key(model, lang, quality)
+    path = cache_dir() / f"{servant_id}_{key}.img"
     if path.is_file():
         return path.read_bytes()
 
@@ -156,10 +158,10 @@ async def render_card(servant_id: str, lang: str = "zh") -> bytes | None:
     names = build.assets_used(html)
     extra = await asyncio.to_thread(fetch.extra_images, model, names)
 
-    png = await render.render_png(html, CARD / "templates", extra_images=extra)
+    png = await render.render_png(html, CARD / "templates", extra_images=extra, quality=quality)
     try:
         path.write_bytes(png)
-        for stale in path.parent.glob(f"{servant_id}_*.png"):
+        for stale in path.parent.glob(f"{servant_id}_*.img"):
             if stale.name != path.name:
                 stale.unlink(missing_ok=True)
     except Exception:

@@ -80,6 +80,7 @@ SECTION_SETTINGS = {
     "items": [
         {"k": "fgo设置", "d": "看当前配置；出图 开/关 当场生效", "on": True},
         {"k": "fgo设置语言 中/日", "d": "从者卡/礼装卡名称语言：日文名主显或中文主显", "on": True},
+        {"k": "fgo设置画质 高清/标准/省流", "d": "图大小：PNG 1.3MB ／ WebP 360KB ／ 小图 200KB", "on": True},
         {"k": "fgo下载资源", "d": "后台预热立绘/图标，减少首次出图等待", "on": True},
     ],
 }
@@ -233,25 +234,26 @@ def cache_dir() -> Path:
         return p
 
 
-def _cache_key(model: dict) -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + TEMPLATE.read_text(encoding="utf-8")
+def _cache_key(model: dict, quality: str = "hd") -> str:
+    blob = (json.dumps(model, ensure_ascii=False, sort_keys=True) + quality
+            + TEMPLATE.read_text(encoding="utf-8"))
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
-async def get_help_png() -> bytes | None:
-    """返回帮助图 PNG bytes；pytakumi 不可用或渲染失败时返回 None（调用方降级）。"""
+async def get_help_png(quality: str = "hd") -> bytes | None:
+    """返回帮助图 bytes；pytakumi 不可用或渲染失败时返回 None（调用方降级）。"""
     model = help_model()
-    key = _cache_key(model)
-    path = cache_dir() / f"help_{key}.png"
+    key = _cache_key(model, quality)
+    path = cache_dir() / f"help_{key}.img"
     if path.is_file():
         return path.read_bytes()
     if not render.available():
         return None
 
-    png = await render.render_png(help_html(model), TEMPLATE.parent)
+    png = await render.render_png(help_html(model), TEMPLATE.parent, quality=quality)
     try:
         path.write_bytes(png)
-        for stale in path.parent.glob("help_*.png"):
+        for stale in path.parent.glob("help_*.img"):
             if stale.name != path.name:
                 stale.unlink(missing_ok=True)
     except Exception:

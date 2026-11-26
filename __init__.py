@@ -21,7 +21,9 @@ from .core.settings import (
     format_settings,
     image_on,
     parse_bool,
+    parse_quality,
     put,
+    quality_of,
     scope_of,
 )
 
@@ -112,7 +114,7 @@ async def fgo_help(bot: Bot, ev: Event):
         return await bot.send(HELP_TEXT)
     # 三级降级：服务器端渲染 → 仓库内预渲染图 → 纯文字
     try:
-        png = await get_help_png()
+        png = await get_help_png(quality_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 帮助图渲染失败，降级：{e}")
         png = None
@@ -155,7 +157,7 @@ async def fgo_servant(bot: Bot, ev: Event):
         return await bot.send(format_servant(row))
     # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字
     try:
-        pngs = await render_cards(row["id"], lang=lang_of(ev))
+        pngs = await render_cards(row["id"], lang=lang_of(ev), quality=quality_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 从者卡渲染失败，降级文字：{e}")
         pngs = []
@@ -176,7 +178,7 @@ async def fgo_ce(bot: Bot, ev: Event):
         return await bot.send(format_ce(row))
     try:
         png = await asyncio.wait_for(
-            get_ce_png(dict(row), load_details_for(row), lang_of(ev)), timeout=45)
+            get_ce_png(dict(row), load_details_for(row), lang_of(ev), quality_of(ev)), timeout=45)
     except asyncio.TimeoutError:
         logger.info("[FGOUID] 礼装卡首次渲染超时，先发文字版")
         return await bot.send(format_ce(row) + "\n（礼装卡首次生成要下图，稍后再发一次就有图了）")
@@ -195,7 +197,7 @@ async def fgo_event(bot: Bot, ev: Event):
     if not image_on(ev):
         return await bot.send(format_events(rows))
     try:
-        png = await asyncio.wait_for(get_event_png(rows, kw), timeout=25)
+        png = await asyncio.wait_for(get_event_png(rows, kw, quality_of(ev)), timeout=25)
     except asyncio.TimeoutError:
         logger.info("[FGOUID] 活动卡首次渲染超时，先发文字版")
         return await bot.send(format_events(rows) + "\n（活动卡首次生成要下图，稍后再发一次就有图了）")
@@ -215,7 +217,7 @@ async def fgo_gacha(bot: Bot, ev: Event):
         return await bot.send(format_gacha(rows))
     try:
         # 首屏要下横幅（~150KB/张），给个上限，超时先发文字，缓存会留给下一次
-        png = await asyncio.wait_for(get_gacha_png(rows, kw), timeout=25)
+        png = await asyncio.wait_for(get_gacha_png(rows, kw, quality_of(ev)), timeout=25)
     except asyncio.TimeoutError:
         logger.info("[FGOUID] 卡池卡首次渲染超时，先发文字版")
         return await bot.send(format_gacha(rows) + "\n（卡池卡首次生成要下图，稍后再发一次就有图了）")
@@ -235,7 +237,7 @@ async def fgo_waifu(bot: Bot, ev: Event):
     if not image_on(ev):
         return await bot.send(format_waifu(pick))
     try:
-        pngs = await render_cards(pick["id"], lang=lang_of(ev))
+        pngs = await render_cards(pick["id"], lang=lang_of(ev), quality=quality_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 今日老婆卡渲染失败，降级文字：{e}")
         pngs = []
@@ -257,7 +259,7 @@ async def fgo_daily_draw(bot: Bot, ev: Event):
     if not image_on(ev):
         return
     try:
-        pngs = await render_cards(res["servant_id"], lang=lang_of(ev))
+        pngs = await render_cards(res["servant_id"], lang=lang_of(ev), quality=quality_of(ev))
     except Exception as e:
         logger.warning(f"[FGOUID] 每日一抽卡图渲染失败，只发文字：{e}")
         pngs = []
@@ -297,6 +299,19 @@ async def fgo_set_lang(bot: Bot, ev: Event):
         await bot.send("语言已切换为日文 ✅ 从者卡/礼装卡的名称改成日文主显、中文小字（帮助卡与卡池仍中文）")
     else:
         await bot.send("语言已切换为中文 ✅")
+
+
+@sv.on_command("fgo设置画质", block=True)
+async def fgo_set_quality(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    val = parse_quality(arg)
+    if val is None:
+        return await bot.send("用法：fgo设置画质 高清 / 标准 / 省流\n"
+                              "高清（PNG 1.3MB）· 标准（WebP 360KB）· 省流（小图 WebP 200KB）")
+    put(scope_of(ev), "quality", val)
+    tip = {"hd": "高清：PNG，最清晰", "std": "标准：WebP，体积约 1/3.6，手机上看不出差别",
+           "lite": "省流：分辨率降到 1.5 倍，体积约 1/6"}[val]
+    await bot.send(f"画质已切换为{tip} ✅")
 
 
 @sv.on_fullmatch(("fgo图鉴", "从者图鉴"), block=True)

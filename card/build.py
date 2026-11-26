@@ -245,7 +245,7 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
         "ART": f"art_{sid}.png",
         "BOND_IMG": f"bond_ce_{sid}.png",
         "BOND_NAME": bond.get("name", ""),
-        "BOND_META": bond_meta,
+        "BOND_EFFECT": bond.get("effect", ""),
     }.items():
         html = html.replace("{{" + k + "}}", str(v))
     return html

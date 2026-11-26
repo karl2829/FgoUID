@@ -141,8 +141,9 @@ def gacha_html(model: dict) -> str:
     return out
 
 
-def _cache_key(model: dict) -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + TEMPLATE.read_text(encoding="utf-8")
+def _cache_key(model: dict, quality: str = "hd") -> str:
+    blob = (json.dumps(model, ensure_ascii=False, sort_keys=True) + quality
+            + TEMPLATE.read_text(encoding="utf-8"))
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
@@ -175,12 +176,12 @@ async def prewarm_banners(limit: int = 12) -> int:
     return len(got)
 
 
-async def get_gacha_png(rows, keyword: str = "") -> bytes | None:
+async def get_gacha_png(rows, keyword: str = "", quality: str = "hd") -> bytes | None:
     """渲染卡池卡；pytakumi 不可用/渲染失败时返回 None（调用方降级文字）。"""
     model = gacha_model(rows, keyword)
     if not model["items"]:
         return None
-    key = _cache_key(model)
+    key = _cache_key(model, quality)
     path = store.data_dir() / f"gacha_{key}.png"
     if path.is_file():
         return path.read_bytes()
@@ -199,12 +200,13 @@ async def get_gacha_png(rows, keyword: str = "") -> bytes | None:
         for it in model["items"]:
             if it["banner"] in missing:
                 it["banner"] = ""
-        key2 = _cache_key(model)
+        key2 = _cache_key(model, quality)
         path2 = path.parent / path.name.replace(key, key2)
         if path2.is_file():
             return path2.read_bytes()
         key, path = key2, path2
-    png = await render.render_png(gacha_html(model), TEMPLATE.parent, extra_images=images)
+    png = await render.render_png(gacha_html(model), TEMPLATE.parent, extra_images=images,
+                                  quality=quality)
     try:
         path.write_bytes(png)
         for stale in path.parent.glob("gacha_*.png"):

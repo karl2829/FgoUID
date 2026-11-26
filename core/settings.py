@@ -20,13 +20,15 @@ _lock = threading.Lock()
 DEFAULTS: dict[str, object] = {
     "image": True,     # 出图开关：关掉后所有卡片命令回落到文字
     "lang": "zh",      # zh / jp（名称语言，日文名数据来自模型里的 name_jp）
+    "quality": "std",  # hd 高清 PNG ／ std WebP（默认）／ lite 小图 WebP
 }
 
 # 给「fgo设置」文案用的中文名
-LABELS = {"image": "出图", "lang": "语言"}
+LABELS = {"image": "出图", "lang": "语言", "quality": "画质"}
 CHOICES = {
     "image": {True: "开", False: "关"},
     "lang": {"zh": "中文", "jp": "日文"},
+    "quality": {"hd": "高清（PNG）", "std": "标准（WebP，默认）", "lite": "省流（小图 WebP）"},
 }
 
 
@@ -88,16 +90,32 @@ def parse_bool(text: str) -> bool | None:
     return None
 
 
+def parse_quality(text: str) -> str | None:
+    t = (text or "").strip().lower()
+    if t in ("高清", "hd", "高", "原图"):
+        return "hd"
+    if t in ("标准", "std", "中", "普通"):
+        return "std"
+    if t in ("省流", "lite", "小", "低", "压缩"):
+        return "lite"
+    return None
+
+
+def quality_of(ev) -> str:
+    return str(get(scope_of(ev), "quality") or "std")
+
+
 def format_settings(ev) -> str:
     scope = scope_of(ev)
     cur = all_of(scope)
     where = "本群" if scope.startswith("g:") else "私聊"
     lines = [f"【FGOUID 设置】{where}"]
-    for key in ("image", "lang"):
+    for key in ("image", "lang", "quality"):
         val = cur.get(key)
         shown = CHOICES.get(key, {}).get(val, str(val))
         lines.append(f"{LABELS[key]}：{shown}")
     lines.append("")
     lines.append("fgo设置出图 开/关 — 关掉后只看文字")
     lines.append("fgo设置语言 中/日 — 从者卡/礼装卡的名称语言")
+    lines.append("fgo设置画质 高清/标准/省流 — 图大小：1.3MB / 360KB / 200KB")
     return "\n".join(lines)

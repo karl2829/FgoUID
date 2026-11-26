@@ -90,14 +90,29 @@ def collect_images(html: str, base: Path) -> Optional[dict[str, bytes]]:
     return out or None
 
 
+# 画质档位 → (dpr, 编码格式, 质量)。实测（摩根 2200x4357）：
+#   hd  PNG  1324KB ／ std WebP 364KB ／ lite(1.5x) WebP 275KB
+QUALITY_PROFILES: dict[str, tuple[float, str, int]] = {
+    "hd": (2, "png", 88),      # 默认：最清晰，体积大
+    "std": (2, "webp", 88),    # 同分辨率换 WebP，约 1/3.6 体积
+    "lite": (1.5, "webp", 85), # 再降分辨率，约 1/6
+}
+
+
+def profile(quality: str) -> tuple[float, str, int]:
+    return QUALITY_PROFILES.get(quality, QUALITY_PROFILES["hd"])
+
+
 def _render_sync(
     html: str,
     base: Path,
     width: int,
-    dpr: int,
+    dpr: float,
     bleed: int,
     margin: int,
     extra_images: Optional[dict[str, bytes]] = None,
+    fmt: str = "png",
+    quality: int = 88,
 ) -> bytes:
     """线程内执行：渲染 + 裁掉外发光预留边。"""
     import pytakumi
@@ -118,10 +133,15 @@ def _render_sync(
     if margin is None:
         return png
     im = Image.open(io.BytesIO(png))
-    cut = max(0, bleed - margin) * dpr
+    cut = int(max(0, bleed - margin) * dpr)
     im = im.crop((cut, cut, im.width - cut, im.height - cut))
     buf = io.BytesIO()
-    im.save(buf, format="PNG", optimize=True)
+    if fmt == "webp":
+        im.save(buf, format="WEBP", quality=quality, method=6)
+    elif fmt == "jpeg":
+        im.convert("RGB").save(buf, format="JPEG", quality=quality, subsampling=2)
+    else:
+        im.save(buf, format="PNG", optimize=True)
     return buf.getvalue()
 
 
@@ -130,15 +150,16 @@ async def render_png(
     base: Path,
     *,
     width: int = 1080,
-    dpr: int = 2,
+    quality: str = "hd",
     bleed: int = 40,
     margin: int = 10,
     extra_images: Optional[dict[str, bytes]] = None,
 ) -> bytes:
-    """渲染 HTML 为 PNG bytes。并发受限（见模块 docstring）。"""
+    """渲染 HTML 为图片 bytes（按画质档位决定 dpr / 编码）。并发受限（见模块 docstring）。"""
     if not available():
         raise RuntimeError("pytakumi 不可用")
+    dpr, fmt, q = profile(quality)
     async with _sem:
         return await asyncio.to_thread(
-            _render_sync, html, base, width, dpr, bleed, margin, extra_images
+            _render_sync, html, base, width, dpr, bleed, margin, extra_images, fmt, q
         )

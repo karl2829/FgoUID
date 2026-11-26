@@ -170,17 +170,19 @@ def ce_html(model: dict) -> str:
     return html
 
 
-def _cache_key(model: dict) -> str:
-    blob = json.dumps(model, ensure_ascii=False, sort_keys=True) + TEMPLATE.read_text(encoding="utf-8")
+def _cache_key(model: dict, quality: str = "hd") -> str:
+    blob = (json.dumps(model, ensure_ascii=False, sort_keys=True) + quality
+            + TEMPLATE.read_text(encoding="utf-8"))
     return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:12]
 
 
-async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh") -> bytes | None:
+async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh",
+                     quality: str = "hd") -> bytes | None:
     """渲染礼装卡；没有卡面图或 pytakumi 不可用时返回 None（调用方降级文字）。"""
     if not detail or not detail.get("art_url"):
         return None
     model = ce_model(ce, detail, lang)
-    key = _cache_key(model)
+    key = _cache_key(model, quality)
     path = store.data_dir() / f"ce_{model['id']}_{key}.png"
     if path.is_file():
         return path.read_bytes()
@@ -194,7 +196,8 @@ async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh") -> bytes |
     )
     if not images:
         return None
-    png = await render.render_png(ce_html(model), TEMPLATE.parent, extra_images=images)
+    png = await render.render_png(ce_html(model), TEMPLATE.parent, extra_images=images,
+                                  quality=quality)
     try:
         path.write_bytes(png)
         for stale in path.parent.glob(f"ce_{model['id']}_*.png"):
