@@ -9,6 +9,7 @@ from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_card
+from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
 
 from .core.db import (
@@ -31,10 +32,14 @@ HELP_IMG = Path(__file__).resolve().parent / "assets" / "help.png"
 
 HELP_TEXT = (
     "【FGO 插件】\n"
-    "fgo从者 <名称> — 从者信息\n"
+    "— 公共信息 —\n"
+    "fgo从者 <名称> — 从者卡图\n"
     "fgo礼装 <名称> — 概念礼装\n"
     "fgo活动 [关键词] — 活动列表/搜索\n"
     "fgo卡池 [关键词] — 卡池日历/搜索\n"
+    "— 趣味互动 —\n"
+    "fgo今日老婆 — 今天的老婆\n"
+    "— 其他 —\n"
     "fgo测试 — 链路自检\n"
     "fgo帮助 — 本帮助"
 )
@@ -116,3 +121,18 @@ async def fgo_event(bot: Bot, ev: Event):
 async def fgo_gacha(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
     await bot.send(format_gacha(list_gacha(kw)))
+
+
+@sv.on_fullmatch(("fgo今日老婆", "今日老婆", "fgo老婆"), block=True)
+async def fgo_waifu(bot: Bot, ev: Event):
+    pick = today_waifu(ev.user_id)
+    if pick is None:
+        return await bot.send("数据还没同步好，稍后再试")
+    try:
+        png = await render_card(pick["id"])
+    except Exception as e:
+        logger.warning(f"[FGOUID] 今日老婆卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(format_waifu(pick))

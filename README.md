@@ -10,6 +10,7 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 | `fgo礼装 <名称>` | 概念礼装（稀有度/COST/类型/效果） |
 | `fgo活动 [关键词]` | 未来活动，无则最近活动 |
 | `fgo卡池 [关键词]` | 近期卡池日历 / 按名称搜索 |
+| `fgo今日老婆` | 今天的老婆（按 ID + 日期定种子，每天换人） |
 | `fgo测试` | 链路自检 |
 | `fgo帮助` | 帮助卡（图片，主题同 fgo-wiki card-render） |
 
@@ -84,6 +85,17 @@ python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki --freeze   # 发布快�
 uv venv .render-venv && uv pip install --python .render-venv/bin/python pytakumi==0.1.5 pillow
 PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → assets/help.png
 ```
+
+## 功能规划（四块）
+
+| 块 | 状态 | 内容 |
+|---|---|---|
+| 公共信息 | ✅ 可用 | `fgo从者` `fgo礼装` `fgo活动` `fgo卡池` |
+| 个人数据 | 🚧 施工中 | `fgo登录` `fgo我的` `fgo刷新`（需绑定账号，抓包链接 / 扫码） |
+| 趣味互动 | ✅ 部分可用 | `fgo今日老婆`；`fgo每日一抽`、`fgo年终总结` 施工中 |
+| 设置 | 🚧 施工中 | `fgo设置`、语言 中/日、`fgo下载资源`（预下载素材） |
+
+`fgo帮助` 的图就是按这四块排的，未开放项标「施工中」。
 
 ## 从者卡（带立绘）
 

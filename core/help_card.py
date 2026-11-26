@@ -31,29 +31,55 @@ TITLE = "指令帮助"
 SUB = "FGO 查询插件　·　指令即查　·　数据来自 fgo-wiki 离线快照"
 PILL = "运行中"
 
-# 指令区（改命令就改这里，HTML 与将来的 PIL 共用）
-SECTION_COMMANDS = {
-    "title": "查询指令",
-    "en": "C O M M A N D S",
+# 四块结构（改命令就改这里，HTML 与将来的 PIL 共用）
+SECTION_WIKI = {
+    "title": "公共信息",
+    "en": "W I K I",
     "kind": "rows",
     "rows": [
-        {"k": "fgo从者 &lt;名称&gt;", "d": "星级、职阶、攻击 / HP、属性、阵营、性别、特性、卡池",
+        {"k": "fgo从者 &lt;名称&gt;", "d": "从者卡图：立绘、六维、宝具、技能数值",
          "e": "fgo从者 摩根"},
-        {"k": "fgo礼装 &lt;名称&gt;", "d": "星级、COST、类型、效果", "e": "fgo礼装 宝石翁"},
-        {"k": "fgo活动 [关键词]", "d": "未来 730 天内的活动；带关键词则在全部活动中搜索",
+        {"k": "fgo礼装 &lt;名称&gt;", "d": "概念礼装：星级、COST、类型、效果",
+         "e": "fgo礼装 宝石翁"},
+        {"k": "fgo活动 [关键词]", "d": "未来 730 天内的活动；带词则全库搜索",
          "e": "fgo活动 特异点"},
-        {"k": "fgo卡池 [关键词]", "d": "近期卡池与 UP 从者；带关键词则按卡池名搜索",
+        {"k": "fgo卡池 [关键词]", "d": "近期卡池与 UP 从者；带词按卡池名搜索",
          "e": "fgo卡池 摩根"},
     ],
 }
 
-SECTION_UTILITY = {
-    "title": "辅助指令",
-    "en": "U T I L I T Y",
-    "kind": "duo",
-    "rows": [
-        {"k": "fgo测试", "d": "链路自检：能收到回复即插件正常"},
-        {"k": "fgo帮助", "d": "显示本图，随时查看指令与用法"},
+SECTION_ACCOUNT = {
+    "title": "个人数据",
+    "en": "A C C O U N T",
+    "kind": "grid",
+    "status": "施工中",
+    "items": [
+        {"k": "fgo登录", "d": "绑定账号：抓包链接 / 扫码，取到个人资源数据", "on": False},
+        {"k": "fgo我的", "d": "圣晶石、素材、QP、从者与进度一览", "on": False},
+        {"k": "fgo刷新", "d": "重新拉取账号数据（卡片与素材同步刷新）", "on": False},
+    ],
+}
+
+SECTION_FUN = {
+    "title": "趣味互动",
+    "en": "F U N",
+    "kind": "grid",
+    "items": [
+        {"k": "fgo今日老婆", "d": "每天换一位，按你的 ID + 日期定种子", "on": True},
+        {"k": "fgo每日一抽", "d": "模拟十连，出货留档（施工中）", "on": False},
+        {"k": "fgo年终总结", "d": "一年抽了多少、养了谁（需绑定账号）", "on": False},
+    ],
+}
+
+SECTION_SETTINGS = {
+    "title": "设置",
+    "en": "S E T T I N G S",
+    "kind": "grid",
+    "status": "施工中",
+    "items": [
+        {"k": "fgo设置", "d": "查看当前配置项", "on": False},
+        {"k": "fgo设置语言 中/日", "d": "卡片文案与名称语言", "on": False},
+        {"k": "fgo下载资源", "d": "预下载立绘/图标，减少首次等待", "on": False},
     ],
 }
 
@@ -88,8 +114,10 @@ def help_model() -> dict:
             ("卡　池", f"{counts.get('gacha', 0):,}"),
         ],
         "sections": [
-            SECTION_COMMANDS,
-            SECTION_UTILITY,
+            SECTION_WIKI,
+            SECTION_ACCOUNT,
+            SECTION_FUN,
+            SECTION_SETTINGS,
             {
                 "title": "使用提示",
                 "en": "N O T E S",
@@ -113,16 +141,34 @@ def help_model() -> dict:
 
 # ---------------------------------------------------------------- HTML 投影
 
-def _sec_head(title: str, en: str) -> str:
+def _sec_head(title: str, en: str, status: str = "") -> str:
+    tag = f'<span class="wip">{status}</span>' if status else ""
     return (
         '<div class="sec-h"><div class="bar"></div>'
-        f'<div class="t">{title}</div><div class="line"></div><div class="n">{en}</div></div>'
+        f'<div class="t">{title}</div>{tag}<div class="line"></div><div class="n">{en}</div></div>'
     )
+
+
+def _grid_html(items: list[dict], cols: int = 3) -> str:
+    """三列卡片：可用项金框实线，未开放项虚线灰字。"""
+    out = []
+    for i in range(0, len(items), cols):
+        cells = "".join(
+            '<div class="gi%s"><div class="gk">%s</div><div class="gd">%s</div>'
+            '<div class="go">%s</div></div>'
+            % (" on" if it.get("on") else "", it["k"], it["d"],
+               "可　用" if it.get("on") else "施 工 中")
+            for it in items[i:i + cols]
+        )
+        out.append(f'<div class="grid">{cells}</div>')
+    return "".join(out)
 
 
 def _section_html(sec: dict) -> str:
     kind = sec["kind"]
-    head = _sec_head(sec["title"], sec["en"])
+    head = _sec_head(sec["title"], sec["en"], sec.get("status", ""))
+    if kind == "grid":
+        return head + _grid_html(sec["items"])
     if kind == "rows":
         rows = "".join(
             f'<div class="row"><div class="k">{r["k"]}</div>'
