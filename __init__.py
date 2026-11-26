@@ -26,6 +26,27 @@ from .core.settings import (
 )
 
 
+CLASS_CN = {
+    "saber": "剑", "archer": "弓", "lancer": "枪", "rider": "骑", "caster": "术",
+    "assassin": "杀", "berserker": "狂", "ruler": "裁", "avenger": "仇",
+    "alterego": "丑", "mooncancer": "月", "foreigner": "外", "pretender": "伪",
+    "shielder": "盾", "beast": "兽",
+}
+
+
+def candidate_text(rows, name: str) -> str:
+    """重名从者：列候选 + 教用户怎么用职阶/星级精确查。"""
+    lines = [f"「{name}」有 {len(rows)} 位，用「职阶 + 名称」区分："]
+    for r in rows:
+        klass = (r["servant_class"] or "").lower()
+        cn = CLASS_CN.get(klass, klass)
+        stars = "★" * int(r["rarity"] or 0)
+        lines.append(f"· {klass.capitalize()}（{cn}）{stars} → fgo从者 {cn} {name}")
+    if len({(r["servant_class"] or "").lower() for r in rows}) < len(rows):
+        lines.append("同职阶重名时再加星级，例如：fgo从者 剑 5星 " + name)
+    return "\n".join(lines)
+
+
 def lang_of(ev: Event) -> str:
     """当前会话的显示语言（zh / jp）。"""
     return str(all_of(scope_of(ev)).get("lang") or "zh")
@@ -40,6 +61,7 @@ from .core.prewarm import (
 from .core.db import (
     find_ce,
     find_servant,
+    find_servants,
     format_ce,
     format_events,
     format_gacha,
@@ -58,7 +80,7 @@ HELP_IMG = Path(__file__).resolve().parent / "assets" / "help.png"
 HELP_TEXT = (
     "【FGO 插件】\n"
     "— 公共信息 —\n"
-    "fgo从者 <名称> — 从者卡图\n"
+    "fgo从者 [职阶] <名称> — 从者卡图（重名可加职阶，如 剑 伊吹童子）\n"
     "fgo礼装 <名称> — 概念礼装\n"
     "fgo活动 [关键词] — 活动列表/搜索\n"
     "fgo卡池 [关键词] — 卡池日历/搜索\n"
@@ -119,9 +141,12 @@ async def fgo_servant(bot: Bot, ev: Event):
     name = (ev.text or "").strip()
     if not name:
         return await bot.send("用法：fgo从者 <名称>，例如 fgo从者 摩根")
-    row = find_servant(name)
-    if row is None:
-        return await bot.send(f"未找到从者：{name}")
+    rows = find_servants(name)
+    if not rows:
+        return await bot.send(f"未找到从者：{name}（可用「职阶 + 名称」区分重名，如 fgo从者 剑 伊吹童子）")
+    if len(rows) > 1:
+        return await bot.send(candidate_text(rows, name))
+    row = rows[0]
     if not image_on(ev):
         return await bot.send(format_servant(row))
     # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字

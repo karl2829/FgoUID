@@ -1,6 +1,7 @@
 """FGOUID 本地索引查询（SQLite，只读，运行时零 wiki 依赖）。"""
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import date, timedelta
 from pathlib import Path
@@ -32,6 +33,117 @@ def _conn() -> sqlite3.Connection:
     return con
 
 
+
+# 职阶别名：中文 / 英文 / 日文都认，长的优先匹配（「アルターエゴ」不能被「エゴ」抢）
+CLASS_TOKENS: list[tuple[str, str]] = sorted({
+    ("saber", "saber"), ("剑", "saber"), ("剑士", "saber"), ("剑阶", "saber"),
+    ("セイバー", "saber"), ("剣", "saber"), ("剣士", "saber"),
+    ("archer", "archer"), ("弓", "archer"), ("弓兵", "archer"), ("弓阶", "archer"),
+    ("アーチャー", "archer"),
+    ("lancer", "lancer"), ("枪", "lancer"), ("枪兵", "lancer"), ("枪阶", "lancer"),
+    ("ランサー", "lancer"), ("槍", "lancer"),
+    ("rider", "rider"), ("骑", "rider"), ("骑兵", "rider"), ("骑阶", "rider"),
+    ("ライダー", "rider"), ("騎", "rider"),
+    ("caster", "caster"), ("术", "caster"), ("术阶", "caster"), ("魔术师", "caster"),
+    ("キャスター", "caster"), ("術", "caster"),
+    ("assassin", "assassin"), ("杀", "assassin"), ("杀阶", "assassin"),
+    ("アサシン", "assassin"), ("殺", "assassin"),
+    ("berserker", "berserker"), ("狂", "berserker"), ("狂阶", "berserker"),
+    ("バーサーカー", "berserker"), ("狂战士", "berserker"),
+    ("ruler", "ruler"), ("裁", "ruler"), ("尺", "ruler"), ("ルーラー", "ruler"),
+    ("avenger", "avenger"), ("仇", "avenger"), ("复仇者", "avenger"),
+    ("アヴェンジャー", "avenger"),
+    ("alterego", "alterego"), ("丑", "alterego"), ("他我", "alterego"),
+    ("アルターエゴ", "alterego"),
+    ("mooncancer", "mooncancer"), ("mc", "mooncancer"), ("月", "mooncancer"),
+    ("ムーンキャンサー", "mooncancer"),
+    ("foreigner", "foreigner"), ("外", "foreigner"), ("降", "foreigner"),
+    ("フォーリナー", "foreigner"), ("フォーリナ", "foreigner"),
+    ("pretender", "pretender"), ("伪", "pretender"), ("詐", "pretender"),
+    ("プリテンダー", "pretender"),
+    ("shielder", "shielder"), ("盾", "shielder"), ("シールダー", "shielder"),
+    ("beast", "beast"), ("兽", "beast"), ("ビースト", "beast"),
+}, key=lambda kv: -len(kv[0]))
+
+STAR_RE = re.compile(r"\s*(?:★\s*(\d)|([1-5一二三四五])\s*星)\s*")
+
+
+def _parse_servant_query(query: str) -> tuple[str, str | None, int | None]:
+    """把「剑 伊吹童子」「伊吹童子 5星」「berserker5★伊吹童子」拆成 (名字, 职阶, 星级)。"""
+    q = (query or "").strip()
+    cls = None
+    star = None
+    m = STAR_RE.search(q)
+    if m:
+        raw = m.group(1) or m.group(2)
+        star = int(raw) if str(raw).isdigit() else "一二三四五".index(raw) + 1
+        q = (q[: m.start()] + " " + q[m.end():]).strip()
+    for token, cid in CLASS_TOKENS:
+        if q.lower().startswith(token) and len(q) > len(token):
+            rest = q[len(token):].strip(" ·・-／/")
+            if rest:
+                cls = cid
+                q = rest
+                break
+    return q, cls, star
+
+
+def _search_rows(con, query: str, limit: int = 12):
+    """先精确别名，再前缀/包含匹配；同一名字的多条都返回（不要 LIMIT 1）。"""
+    q = (query or "").strip()
+    if not q:
+        return []
+    rows = con.execute(
+        """SELECT DISTINCT t.* FROM servants t
+            WHERE t.id IN (SELECT entity_id FROM aliases
+                            WHERE alias = ? AND entity_type = 'servant')
+         ORDER BY CASE t.region WHEN 'CN' THEN 0 ELSE 1 END""",
+        (q,),
+    ).fetchall()
+    if rows:
+        return rows
+    for pattern in (q, f"{q}%", f"%{q}%"):
+        rows = con.execute(
+            """SELECT * FROM servants WHERE name LIKE ?
+             ORDER BY CASE region WHEN 'CN' THEN 0 ELSE 1 END LIMIT ?""",
+            (pattern, limit),
+        ).fetchall()
+        if rows:
+            return rows
+    return []
+
+
+def _dedupe(rows) -> list:
+    """同一个 id 的国服/日服两条记录只留国服那条。"""
+    seen, out = set(), []
+    for r in rows:
+        if r["id"] in seen:
+            continue
+        seen.add(r["id"])
+        out.append(r)
+    return out
+
+
+def find_servants(query: str) -> list:
+    """从者查询：支持「职阶 + 名称」「名称 + 星级」，返回全部候选（重名不吃掉）。"""
+    q = _resolve(query)
+    con = _conn()
+    try:
+        rows = _dedupe(_search_rows(con, q))
+        if rows:
+            return rows
+        name, cls, star = _parse_servant_query(q)
+        if not name or (cls is None and star is None):
+            return []
+        rows = _dedupe(_search_rows(con, name))
+        if cls:
+            rows = [r for r in rows if (r["servant_class"] or "").lower() == cls]
+        if star:
+            rows = [r for r in rows if int(r["rarity"] or 0) == star]
+        return rows
+    finally:
+        con.close()
+
 def _lookup(con, table: str, entity_type: str, query: str, name_col: str = "name"):
     q = (query or "").strip()
     if not q:
@@ -53,6 +165,11 @@ def _lookup(con, table: str, entity_type: str, query: str, name_col: str = "name
         if row:
             return row
     return None
+
+
+def find_servant(query: str):
+    rows = find_servants(query)
+    return rows[0] if rows else None
 
 
 def find_servant_id(query: str) -> str | None:

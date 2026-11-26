@@ -59,13 +59,22 @@ def font_path() -> Optional[Path]:
     return None
 
 
+# 主字体（MiSans / 文泉驿）缺一些符号：∅(U+2205)、部分箭头/数学符号会渲染成豆腐块。
+# 追加一份 DejaVu Sans 当兜底——pytakumi 里「注册多个字体」就是全局回退链，
+# 主字体有的字形仍用它，缺的才落到 DejaVu。
+FALLBACK_FONT = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "DejaVuSans.ttf"
+
+
 def load_fonts() -> Optional[list[bytes]]:
     global _fonts
     if _fonts is None:
+        fonts: list[bytes] = []
         p = font_path()
-        if p is None:
-            return None
-        _fonts = [p.read_bytes()]
+        if p is not None:
+            fonts.append(p.read_bytes())
+        if FALLBACK_FONT.is_file():
+            fonts.append(FALLBACK_FONT.read_bytes())
+        _fonts = fonts or None
     return _fonts
 
 

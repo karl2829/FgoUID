@@ -45,7 +45,7 @@ def _skill_effect(eff: dict) -> str:
     head = f'<div class="sk-d"><span>{desc}</span></div>'
 
     if not values:                      # 恒定效果 / 无数值效果：都是通栏单格
-        body = fixed if fixed else '<span class="empty">Ø</span>'
+        body = fixed if fixed else '<span class="empty">∅</span>'
         cls = "vb1" if fixed else "vb1 vb-empty"
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
 

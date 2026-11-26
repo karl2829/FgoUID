@@ -35,12 +35,18 @@ FONT_CANDIDATES = (
 _fonts: list[bytes] | None = None
 
 
+FALLBACK_FONT = ROOT / "assets" / "fonts" / "DejaVuSans.ttf"
+
+
 def fonts() -> list[bytes]:
+    """主字体 + DejaVu 兜底（补 ∅ 这类中文/中文字体缺的符号）。"""
     global _fonts
     if _fonts is None:
         got = [open(p, "rb").read() for p in FONT_CANDIDATES if os.path.exists(p)]
         if not got:
             raise RuntimeError("找不到中文字体，先装 fonts-wqy-zenhei")
+        if FALLBACK_FONT.is_file():
+            got.append(FALLBACK_FONT.read_bytes())
         _fonts = got
     return _fonts
 
