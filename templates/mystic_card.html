@@ -60,17 +60,7 @@ h1{font-size:46px;line-height:1.18;color:var(--text-1);margin-top:12px;letter-sp
   background:var(--g10);border:1px solid var(--g48);box-shadow:inset 0 1px 0 rgba(255,255,255,.10)}
 .pill i{width:7px;height:7px;border-radius:50%;background:var(--gold-hi);box-shadow:0 0 8px rgba(245,227,174,.8)}
 
-/* ---------- 数据条 ---------- */
 .rule{height:1px;background:var(--rule);margin:var(--sp-3) var(--pad-x) 0}
-.statwrap{display:flex;justify-content:center;margin:var(--sp-2) var(--pad-x) 0}
-.stats{display:inline-flex;border-radius:11px;background:var(--ink-42);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
-.stats .st{flex:0 0 auto;min-width:150px;text-align:center;padding:12px 28px 13px;
-  border-right:1px solid var(--g16)}
-.stats .st:last-child{border-right:0}
-.stats .st i{display:block;font-style:normal;font-size:11.5px;color:#7E8CA2;letter-spacing:.20em}
-.stats .st b{display:block;font-weight:400;font-size:26px;color:var(--num);margin-top:3px;
-  font-variant-numeric:tabular-nums}
 
 /* ---------- 区块标题 ---------- */
 .sec-h{display:flex;align-items:center;gap:var(--sp-2);margin:40px var(--pad-x) 0}
@@ -91,11 +81,9 @@ h1{font-size:46px;line-height:1.18;color:var(--text-1);margin-top:12px;letter-sp
   border:1px solid var(--g48)}
 .nm{font-size:19px;color:var(--text-1);letter-spacing:.02em}
 .sp{flex:1}
-.cd{font-size:13px;color:#93A2BA;letter-spacing:.04em}
-.cd b{color:var(--gold-mid);font-weight:400;font-size:15px;font-variant-numeric:tabular-nums}
-.eff{margin-top:10px;font-size:15px;line-height:1.55;color:#E6EAF2}
-.cdl{margin-top:8px;font-size:12.5px;color:#93A2BA;letter-spacing:.04em}
-.cdg{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px}
+.eff{margin-top:12px;font-size:15px;line-height:1.55;color:#E6EAF2}
+.eff:first-of-type{margin-top:10px}
+.v5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px}
 .vc{height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;
   background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
   color:#D8CDB6;font-size:13px;font-variant-numeric:tabular-nums;
@@ -136,7 +124,6 @@ h1{font-size:46px;line-height:1.18;color:var(--text-1);margin-top:12px;letter-sp
 </header>
 
 <div class="rule"></div>
-<div class="statwrap"><div class="stats">{{STATS}}</div></div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">持有技能</div>
   <div class="line"></div><div class="n">S K I L L S</div></div>
@@ -145,8 +132,8 @@ h1{font-size:46px;line-height:1.18;color:var(--text-1);margin-top:12px;letter-sp
 {{SKILLS}}
 </div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">解说</div>
-  <div class="line"></div><div class="n">L O R E</div></div>
+<div class="sec-h"><div class="bar"></div><div class="t">说明</div>
+  <div class="line"></div><div class="n">N O T E S</div></div>
 <div class="detail">{{DETAIL}}</div>
 
 <div class="orn"><i></i><b></b><i></i></div>

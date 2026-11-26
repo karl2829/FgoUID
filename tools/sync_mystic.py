@@ -88,6 +88,43 @@ def parse_md(path: Path) -> dict | None:
     }
 
 
+RAW_TYPES = {"gainHp", "gainStar", "gainNp", "gainCp", "addNp", "subHp", "addMaxHp"}
+
+
+def _fmt_value(func_type: str, raw: list) -> list[str]:
+    """svals → 展示用的 10 个值。百分比类 Value/10，HP/暴击星等保持原值。"""
+    vals = [v for v in raw if v is not None]
+    if not vals:
+        return []
+    if func_type in RAW_TYPES:
+        return [f"{int(v)}" for v in vals]
+    if func_type == "addState" and max(vals) >= 1000:     # 毅力这类是 HP 数值，不是百分比
+        return [f"{int(v)}" for v in vals]
+    return [f"{v / 10:g}%" for v in vals]
+
+
+def parse_effects(raw_skill: dict) -> list[dict]:
+    """unmodifiedDetail 按 ＆ 拆词条，每个词条配自己的 svals（没有数值的只留文字）。"""
+    detail = raw_skill.get("unmodifiedDetail") or raw_skill.get("detail") or ""
+    parts = [p.strip() for p in re.split(r"[＆&]", detail) if p.strip()]
+    fns = [f for f in (raw_skill.get("functions") or [])
+           if any(x.get("Value") is not None for x in (f.get("svals") or []))]
+    need = sum(p.count("[{0}]") for p in parts)
+    nonzero = [f for f in fns if any((x.get("Value") or 0) != 0 for x in (f.get("svals") or []))]
+    if len(nonzero) >= need:          # 优先用真正带数值的 function（避开 0 值占位）
+        fns = nonzero
+    fi = 0
+    out = []
+    for part in parts:
+        text = re.sub(r"\[\{0\}\]", "", part).strip()
+        vals: list[str] = []
+        if "[{0}]" in part and fi < len(fns):
+            vals = _fmt_value(fns[fi].get("funcType", ""), [x.get("Value") for x in fns[fi]["svals"]])
+            fi += 1
+        out.append({"text": text, "vals": vals})
+    return out
+
+
 def load_raw(wiki: Path) -> dict[str, dict]:
     p = wiki / "raw" / "mystic-codes" / "all.json"
     if not p.is_file():
@@ -114,6 +151,12 @@ def sync(wiki: Path, con: sqlite3.Connection) -> dict:
         if not info:
             continue
         r = raw.get(info["id"], {})
+        raw_skills = {sk.get("name"): sk for sk in (r.get("skills") or [])}
+        for sk in info["skills"]:
+            src = raw_skills.get(sk["name"])
+            sk["effects"] = parse_effects(src) if src else []
+            if src and src.get("coolDown"):
+                sk["cd"] = "→".join(str(x) for x in src["coolDown"])
         assets = r.get("extraAssets") or {}
         icon = (assets.get("item") or {}).get("female") or (assets.get("item") or {}).get("male") or ""
         figure = (assets.get("masterFigure") or {}).get("female") or (assets.get("masterFigure") or {}).get("male") or ""
