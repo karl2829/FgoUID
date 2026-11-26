@@ -8,7 +8,7 @@ from gsuid_core.models import Event
 from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
-from .core.card import render_card
+from .core.card import render_cards
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
 
@@ -89,14 +89,14 @@ async def fgo_servant(bot: Bot, ev: Event):
     row = find_servant(name)
     if row is None:
         return await bot.send(f"未找到从者：{name}")
-    # 有卡片数据就发主题卡图；没有/渲染失败则退回文字
+    # 有卡片数据就发主题卡图（多宝具从者按模组各发一张）；没有/渲染失败则退回文字
     try:
-        png = await render_card(row["id"])
+        pngs = await render_cards(row["id"])
     except Exception as e:
         logger.warning(f"[FGOUID] 从者卡渲染失败，降级文字：{e}")
-        png = None
-    if png:
-        return await bot.send(MessageSegment.image(png))
+        pngs = []
+    if pngs:
+        return await bot.send([MessageSegment.image(p) for p in pngs])
     await bot.send(format_servant(row))
 
 
@@ -129,10 +129,10 @@ async def fgo_waifu(bot: Bot, ev: Event):
     if pick is None:
         return await bot.send("数据还没同步好，稍后再试")
     try:
-        png = await render_card(pick["id"])
+        pngs = await render_cards(pick["id"])
     except Exception as e:
         logger.warning(f"[FGOUID] 今日老婆卡渲染失败，降级文字：{e}")
-        png = None
-    if png:
-        return await bot.send(MessageSegment.image(png))
+        pngs = []
+    if pngs:
+        return await bot.send([MessageSegment.image(p) for p in pngs])
     await bot.send(format_waifu(pick))
