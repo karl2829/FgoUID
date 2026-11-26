@@ -215,8 +215,10 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .sk-e{margin-top:12px}
 .sk-d{display:flex;align-items:baseline;gap:var(--sp-1);font-size:15px;line-height:22px;color:#DCE6F5}
 .sk-d .tag{font-size:13px;color:var(--gold-mid);letter-spacing:.06em}
-/* 精简版（Sonnet 方案）：说明一行，下面 3 个格子——沿用宝具格 .vb5 的底色/描边/圆角 */
-.v3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+/* 精简版：说明一行 + 5 个格子（与宝具区同列数），中间两格是 … */
+.v5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px}
+.v3{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:6px}
+.v3-single{display:block}
 .v3 .vc{height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;
   background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
   color:#D8CDB6;font-size:13px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;
@@ -225,6 +227,13 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .v3 .vc.vc-fix{grid-column:1 / -1}
 .v3 .vc.vc-none{color:#7C8AA0;font-size:13px;letter-spacing:.10em;border-style:dashed;background:var(--ink-34)}
 .v3 .vc .empty{color:#8794AA;font-size:14px;letter-spacing:0}
+.v5 .vc{height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;
+  background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
+  color:#D8CDB6;font-size:13px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.v5 .vc.vc-edge{color:var(--gold-hi);border-color:var(--g48);background:var(--g10)}
+.v5 .vc.vc-dots{color:#5C6B85;background:transparent;border-style:dashed;border-color:rgba(255,255,255,.07);
+  box-shadow:none;letter-spacing:0;font-size:13px}
 
 /* ---------- 宝具区 ---------- */
 .np{position:relative;z-index:1;display:flex;flex-direction:column;

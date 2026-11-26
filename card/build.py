@@ -68,13 +68,15 @@ def _skill_effect(eff: dict, compact: bool = False) -> str:
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
 
     if compact:
-        # 精简版（Sonnet 方案）：说明独占一行，下一行 3 个格子（Lv.1 / 6 / 10），与宝具区同结构
+        # 精简版：5 个格子与宝具区对齐（Lv.1 / … / Lv.6 / … / Lv.10），中间两格用 … 表示省略
         levels = [i for i in sorted(BREAK_LEVELS) if i <= len(values)]
-        cells = "".join(
-            f'<div class="vc{" vc-edge" if i == levels[-1] else ""}">{values[i - 1]}</div>'
-            for i in levels
-        )
-        return f'<div class="sk-e">{head}<div class="v3">{cells}</div></div>'
+        cells = []
+        for idx, lv in enumerate(levels):
+            if idx:
+                cells.append('<div class="vc vc-dots">…</div>')
+            edge = " vc-edge" if lv == levels[-1] else ""
+            cells.append(f'<div class="vc{edge}">{values[lv - 1]}</div>')
+        return f'<div class="sk-e">{head}<div class="v5">{"".join(cells)}</div></div>'
 
 
     cells = []
