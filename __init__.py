@@ -325,13 +325,11 @@ async def fgo_prewarm(bot: Bot, ev: Event):
 # 启动时静默预热接下来几期的卡池横幅：首图慢主要慢在下这 150KB/张的图
 async def _startup_prewarm() -> None:
     try:
-        n = await prewarm_banners(12)
-        logger.info(f"[FGOUID] 卡池横幅预热 {n} 张")
+        await prewarm_banners(12)
     except Exception as e:
         logger.debug(f"[FGOUID] 卡池横幅预热跳过：{e}")
     try:
-        m = await prewarm_event_banners(6)
-        logger.info(f"[FGOUID] 活动横幅预热 {m} 张")
+        await prewarm_event_banners(6)
     except Exception as e:
         logger.debug(f"[FGOUID] 活动横幅预热跳过：{e}")
 
