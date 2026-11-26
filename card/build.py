@@ -58,24 +58,23 @@ def _skill_effect(eff: dict, compact: bool = False) -> str:
     head = f'<div class="sk-d"><span>{desc}</span></div>'
 
     if not values:                      # 恒定效果 / 无数值效果
-        if compact:
+        if compact:                     # 恒定效果：一个整宽格（虚线 ∅）
             body = fixed if fixed else '<span class="empty">∅</span>'
-            cls = "p" if fixed else "p p-none"
-            return (f'<div class="sk-e"><div class="sk-d"><span>{desc}</span>'
-                    f'<span class="vpill"><b class="{cls}">{body}</b></span></div></div>')
+            cls = "vc vc-fix" if fixed else "vc vc-fix vc-none"
+            return f'<div class="sk-e">{head}<div class="v3"><div class="{cls}">{body}</div></div></div>'
 
         body = fixed if fixed else '<span class="empty">∅</span>'
         cls = "vb1" if fixed else "vb1 vb-empty"
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
 
     if compact:
-        # 精简版：说明一行，右侧三个「药丸」——沿用宝具格的配色与描边，但并进同一行
+        # 精简版（Sonnet 方案）：说明独占一行，下一行 3 个格子（Lv.1 / 6 / 10），与宝具区同结构
         levels = [i for i in sorted(BREAK_LEVELS) if i <= len(values)]
-        pills = "".join(
-            f'<b class="{"p p-edge" if i in (levels[0], levels[-1]) else "p"}">{values[i - 1]}</b>'
+        cells = "".join(
+            f'<div class="vc{" vc-edge" if i == levels[-1] else ""}">{values[i - 1]}</div>'
             for i in levels
         )
-        return f'<div class="sk-e"><div class="sk-d"><span>{desc}</span><span class="vpill">{pills}</span></div></div>'
+        return f'<div class="sk-e">{head}<div class="v3">{cells}</div></div>'
 
 
     cells = []

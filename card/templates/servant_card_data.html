@@ -195,10 +195,11 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 
 /* ---------- 技能区：整宽三行 ---------- */
 .skills{position:relative;z-index:1;margin:9px var(--pad-x) 0;display:flex;flex-direction:column;gap:8px}
-.sk{border-radius:14px;border:1px solid rgba(255,255,255,.08);padding:10px 16px 11px;
+.sk{border-radius:14px;border:1px solid rgba(255,255,255,.08);padding:14px 16px 14px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), inset 0 -1px 0 rgba(0,0,0,.45), 0 2px 14px rgba(0,0,0,.35)}
-.sk-h{display:flex;align-items:center;gap:11px}
+.sk-h{display:flex;align-items:center;gap:11px;padding-bottom:10px;
+  border-bottom:1px solid rgba(42,59,96,.85);margin-bottom:10px}
 .sk-h img{width:var(--pad-x);height:var(--pad-x);border-radius:50%;display:block;flex:0 0 var(--pad-x);
   box-shadow:0 0 0 2px rgba(11,18,32,.72), 0 0 0 3px rgba(255,255,255,.14), 0 4px 12px rgba(0,0,0,.5)}
 .sk-h .nm{font-size:19px;color:var(--text-1)}
@@ -214,27 +215,16 @@ body{padding:40px;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-ser
 .sk-e{margin-top:12px}
 .sk-d{display:flex;align-items:baseline;gap:var(--sp-1);font-size:15px;line-height:22px;color:#DCE6F5}
 .sk-d .tag{font-size:13px;color:var(--gold-mid);letter-spacing:.06em}
-/* 精简版：说明同行右侧三个药丸，沿用宝具格的底色/描边（同一个画风，但不额外占一行） */
-.sk-d .vpill{margin-left:auto;flex:0 0 auto;display:flex;gap:5px}
-.sk-d .vpill .p{display:flex;align-items:center;justify-content:center;min-width:62px;height:25px;
-  padding:0 7px;border-radius:5px;background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
-  color:#D8CDB6;font-weight:400;font-size:12.5px;font-variant-numeric:tabular-nums;
-  letter-spacing:-.01em;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);white-space:nowrap}
-.sk-d .vpill .p-edge{color:var(--gold-hi);border-color:var(--g48);background:var(--g10)}
-.sk-d .vpill .p-none{color:#7C8AA0;letter-spacing:.10em;border-style:dashed;background:var(--ink-34);min-width:74px}
-.sk-d .vpill .p .empty{color:#8794AA;letter-spacing:0}
-.v10{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;margin-top:8px}
-.v10 .vb{position:relative;height:28px;display:flex;align-items:center;justify-content:center;
-  padding:0 3px;border-radius:5px;background:rgba(11,18,32,.34);border:1px solid rgba(255,255,255,.06);
-  color:#B8C4DA;font-size:12.5px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.v10 .vb.mid{background:var(--g10);border-color:var(--g32);color:#DCC78F;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
-/* 金线只出现在 Lv.1/6/10（build.py 的 BREAK_LEVELS），并压暗一档，别抢过说明文字 */
-.v10 .vb .brk{position:absolute;left:30%;right:30%;bottom:0;height:2px;border-radius:2px;
-  background:rgba(227,195,107,.55)}
-.v1x{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:14.5px;color:#6C7A90;letter-spacing:.04em}
-.v1x i{width:14px;height:1px;background:rgba(255,255,255,.16)}
+/* 精简版（Sonnet 方案）：说明一行，下面 3 个格子——沿用宝具格 .vb5 的底色/描边/圆角 */
+.v3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:6px}
+.v3 .vc{height:26px;display:flex;align-items:center;justify-content:center;border-radius:5px;
+  background:var(--ink-50);border:1px solid rgba(255,255,255,.10);
+  color:#D8CDB6;font-size:13px;font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.v3 .vc.vc-edge{color:var(--gold-hi);border-color:var(--g48);background:var(--g10)}
+.v3 .vc.vc-fix{grid-column:1 / -1}
+.v3 .vc.vc-none{color:#7C8AA0;font-size:13px;letter-spacing:.10em;border-style:dashed;background:var(--ink-34)}
+.v3 .vc .empty{color:#8794AA;font-size:14px;letter-spacing:0}
 
 /* ---------- 宝具区 ---------- */
 .np{position:relative;z-index:1;display:flex;flex-direction:column;
