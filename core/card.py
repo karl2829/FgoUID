@@ -41,6 +41,15 @@ def split_modules(model: dict) -> list[dict]:
     玛修、玉兔、卫宫这种从者有 2~4 套宝具，硬塞进一张图会拉到上万像素，
     不如按模组各出一张，用户自己翻。
     """
+    # 多形态（玛修）：每种形态一张卡，用该形态自己的技能组与宝具
+    forms = model.get("forms") or []
+    if len(forms) >= 2:
+        return [dict(model, skills=f.get("skills") or [],
+                     np=f.get("np") or (model.get("np") or {}),
+                     _module_no=i + 1, _module_total=len(forms),
+                     _form_label=f.get("form", f"形态 {i + 1}"))
+                for i, f in enumerate(forms)]
+
     modules = (model.get("np") or {}).get("modules") or []
     if len(modules) < 2:
         return [model]
