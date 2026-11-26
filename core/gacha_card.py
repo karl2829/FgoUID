@@ -71,9 +71,9 @@ def gacha_model(rows, keyword: str = "") -> dict:
     items = [_model_row(r) for r in rows]
     regions = sorted({i["region"] for i in items if i["region"]})
     starts = [i["span"][:10] for i in items if len(i["span"]) >= 10]
-    sub = f"{len(items)} 期·数据来自 fgo-wiki 快照"
+    sub = f"{len(items)} 期　·　数据来自 fgo-wiki 快照"
     if keyword:
-        sub = f"搜索「{keyword}」·{sub}"
+        sub = f"搜索「{keyword}」　·　{sub}"
     return {
         "header": {
             "eyebrow_left": EYEBROW_LEFT,
@@ -191,6 +191,19 @@ async def get_gacha_png(rows, keyword: str = "") -> bytes | None:
 
     mapping = {it["banner"]: it["banner_url"] for it in model["items"] if it["banner"]}
     images = await asyncio.to_thread(card_fetch.remote_images, mapping) if mapping else None
+    # 有些横幅在 CDN 上已经 404（raw 里还有 URL），下不回来的就别留空洞，
+    # 改成「暂无横幅」占位，免得版式上出现空白框
+    got = {k[len("../assets/"):] for k in (images or {}) if k.startswith("../assets/")}
+    missing = {it["banner"] for it in model["items"] if it["banner"] and it["banner"] not in got}
+    if missing:
+        for it in model["items"]:
+            if it["banner"] in missing:
+                it["banner"] = ""
+        key2 = _cache_key(model)
+        path2 = path.parent / path.name.replace(key, key2)
+        if path2.is_file():
+            return path2.read_bytes()
+        key, path = key2, path2
     png = await render.render_png(gacha_html(model), TEMPLATE.parent, extra_images=images)
     try:
         path.write_bytes(png)

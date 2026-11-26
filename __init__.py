@@ -11,6 +11,7 @@ from gsuid_core.sv import SV, Plugins
 
 from .core.card import render_cards
 from .core.ce_card import get_ce_png, load_details_for
+from .core.event_card import get_event_png
 from .core.gacha_card import get_gacha_png, prewarm_banners
 from .core.fun import format_waifu, today_waifu
 from .core.help_card import get_help_png
@@ -161,7 +162,20 @@ async def fgo_ce(bot: Bot, ev: Event):
 @sv.on_command("fgo活动", block=True)
 async def fgo_event(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
-    await bot.send(format_events(search_events(kw)))
+    rows = search_events(kw)
+    if not image_on(ev):
+        return await bot.send(format_events(rows))
+    try:
+        png = await asyncio.wait_for(get_event_png(rows, kw), timeout=25)
+    except asyncio.TimeoutError:
+        logger.info("[FGOUID] 活动卡首次渲染超时，先发文字版")
+        return await bot.send(format_events(rows) + "\n（活动卡首次生成要下图，稍后再发一次就有图了）")
+    except Exception as e:
+        logger.warning(f"[FGOUID] 活动卡渲染失败，降级文字：{e}")
+        png = None
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(format_events(rows))
 
 
 @sv.on_command("fgo卡池", block=True)

@@ -8,7 +8,7 @@ FGO（Fate/Grand Order）查询插件，基于 [GsCore](https://github.com/Gensh
 |---|---|
 | `fgo从者 <名称>` | **从者卡图**（立绘 + 六维 + 宝具 + 技能数值）；无卡片数据/渲染失败时退回文字 |
 | `fgo礼装 <名称>` | **礼装卡**（卡面 + 星级/COST + 未破/满破效果）；无卡面数据时退回文字 |
-| `fgo活动 [关键词]` | 未来活动，无则最近活动 |
+| `fgo活动 [关键词]` | **活动日历卡**（横幅 + 时间 + 进行中标记）/ 按名称搜索 |
 | `fgo卡池 [关键词]` | **卡池日历卡**（横幅 + 时间 + UP 从者）/ 按名称搜索 |
 | `fgo今日老婆` | 今天的老婆（按 ID + 日期定种子，每天换人） |
 | `fgo每日一抽` | 每天一抽（同一天结果固定），出货记进图鉴 |
@@ -47,6 +47,7 @@ git clone <本仓库地址> FGOUID
 ```bash
 python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki
 python tools/sync_gacha.py --wiki /path/to/fgo-wiki    # 回填卡池 UP/横幅、活动名/横幅
+                                                       # 活动横幅依赖 wiki raw/events，缺的可用 Atlas 补抓
 python tools/sync_ce.py --wiki /path/to/fgo-wiki       # 礼装卡面/未破满破效果/ATK·HP
 python tools/sync_cards.py                            # 从者卡模型（复用 wiki 解析器）
 python tools/sync_bondce.py                           # 羁绊礼装反查表
@@ -110,7 +111,7 @@ PYTHONDONTWRITEBYTECODE=1 .render-venv/bin/python tools/render_help.py   # → a
 
 | 块 | 状态 | 内容 |
 |---|---|---|
-| 公共信息 | ✅ 可用 | `fgo从者` `fgo礼装` `fgo活动` `fgo卡池` |
+| 公共信息 | ✅ 可用 | `fgo从者` `fgo礼装` `fgo活动` `fgo卡池` 全都出图 |
 | 个人数据 | 🚧 施工中 | `fgo登录` `fgo我的` `fgo刷新`（需绑定账号，抓包链接 / 扫码） |
 | 趣味互动 | ✅ 部分可用 | `fgo今日老婆` `fgo每日一抽` `fgo图鉴`；`fgo年终总结` 施工中（需绑定账号） |
 | 设置 | ✅ 可用 | `fgo设置` `fgo设置出图` `fgo设置语言` `fgo下载资源` |
@@ -150,6 +151,7 @@ FGOUID/
 ├── core/card.py           # 从者卡：模型 → 素材 → 渲染 → 缓存
 ├── core/gacha_card.py     # 卡池日历卡（列表卡）：行模型 → HTML → 渲染 → 缓存
 ├── core/ce_card.py        # 礼装卡：craft_essences + ce_details → HTML → 渲染 → 缓存
+├── core/event_card.py     # 活动日历卡（列表卡）：横幅 + 时间 + 状态
 ├── core/settings.py       # 按群/按人的偏好（出图开关、语言），JSON 落 data/FGOUID
 ├── core/store.py          # 运行时可写目录
 ├── card/                  # 从 fgo-wiki/card-render 搬来的渲染实现
