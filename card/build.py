@@ -45,7 +45,7 @@ def _skill_effect(eff: dict) -> str:
     head = f'<div class="sk-d"><span>{desc}</span></div>'
 
     if not values:                      # 恒定效果 / 无数值效果：都是通栏单格
-        body = fixed if fixed else '<span class="empty">∅</span>'
+        body = fixed if fixed else '<span class="empty">Ø</span>'
         cls = "vb1" if fixed else "vb1 vb-empty"
         return f'<div class="sk-e">{head}<div class="v1"><div class="{cls}">{body}</div></div></div>'
 
@@ -59,13 +59,19 @@ def _skill_effect(eff: dict) -> str:
 
 def _skill(sk: dict, lang: str = "zh") -> str:
     effects = "".join(_skill_effect(e) for e in sk["effects"])
-    name, name_jp = _pick_names(sk.get("name", ""), sk.get("name_jp", ""), sk.get("rank", ""), lang)
-    jp = f'<span class="nm-jp">{name_jp}</span>' if name_jp else ""
+    cn = sk.get("name", "")
+    jp = _strip_rank(sk.get("name_jp", ""), sk.get("rank", ""))
+    rank = sk.get("rank", "")
+    primary, secondary = (jp, cn) if lang == "jp" and jp else (cn, jp)
+    second = ""
+    if secondary and secondary != primary:
+        # 中日两版都带等级：中文名 B ／ 日文名 B
+        second = (f'<span class="sep"></span><span class="nm-jp">{secondary}</span>'
+                  f'<span class="rk sm">{rank}</span>')
     return f'''  <div class="sk">
     <div class="sk-h">
       <img src="../assets/{sk["icon"]}">
-      <span class="nm">{name}</span>{jp}<span class="rk">{sk["rank"]}</span>
-      <span class="sep"></span>
+      <span class="nm">{primary}</span><span class="rk">{rank}</span>{second}
       <span class="sp"></span>
       <span class="cd">充能 <b>{sk["cd"]}</b></span>
     </div>
@@ -214,7 +220,7 @@ def build_html(data: dict, hero_only: bool = False, lang: str = "zh") -> str:
     rarity = int(data.get("rarity", 5))
     tier = "gold" if rarity >= 4 else ("silver" if rarity == 3 else "bronze")
     for k, v in {
-        "STARS": "★" * max(0, min(rarity, 8)),
+        "STARS": f"★{rarity}",
         "STAR_TIER": tier,
         "ART_POS": data.get("art_pos", "50% 5%"),
         "LIMITED": data.get("limited", ""),
