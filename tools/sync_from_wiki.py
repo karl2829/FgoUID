@@ -109,11 +109,11 @@ def build(wiki: Path, out_db: Path) -> dict:
         effect TEXT, file TEXT, PRIMARY KEY (id, region));
     CREATE TABLE events(
         id TEXT, region TEXT, name TEXT, event_type TEXT, start_time TEXT,
-        end_time TEXT, status TEXT, file TEXT, PRIMARY KEY (id, region));
+        end_time TEXT, status TEXT, banner TEXT, file TEXT, PRIMARY KEY (id, region));
     CREATE TABLE gacha(
         id TEXT, region TEXT, name TEXT, gacha_type TEXT, status TEXT,
-        start_time TEXT, end_time TEXT, up_servants TEXT, file TEXT,
-        PRIMARY KEY (id, region));
+        start_time TEXT, end_time TEXT, up_servants TEXT, up_ids TEXT, banner TEXT,
+        file TEXT, PRIMARY KEY (id, region));
     CREATE TABLE aliases(alias TEXT, entity_type TEXT, entity_id TEXT, region TEXT);
     """)
 
@@ -184,7 +184,8 @@ def build(wiki: Path, out_db: Path) -> dict:
             info = parse_table(sec.get("基础信息", []))
             eid = info.get("ID") or f.stem
             db.execute(
-                "INSERT OR REPLACE INTO events VALUES (?,?,?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO events (id, region, name, event_type, start_time,"
+                " end_time, status, file) VALUES (?,?,?,?,?,?,?,?)",
                 (eid, region, info.get("名称", f.stem), info.get("类型", ""),
                  norm_date(info.get("开始时间", "")), norm_date(info.get("结束时间", "")),
                  info.get("状态", ""), str(f)),
@@ -212,7 +213,8 @@ def build(wiki: Path, out_db: Path) -> dict:
             up = " / ".join(clean(x).lstrip("- ").strip() for x in sec.get("UP 从者", []) if x.strip().startswith("-"))[:400]
             gid = meta.get("ID") or f.stem
             db.execute(
-                "INSERT OR REPLACE INTO gacha VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT OR REPLACE INTO gacha (id, region, name, gacha_type, status,"
+                " start_time, end_time, up_servants, file) VALUES (?,?,?,?,?,?,?,?,?)",
                 (gid, region, title or f.stem, meta.get("类型", ""), meta.get("状态", ""),
                  norm_date(times.get("开始", "")), norm_date(times.get("结束", "")), up, str(f)),
             )

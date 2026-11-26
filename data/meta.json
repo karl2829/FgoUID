@@ -1,14 +1,14 @@
 {
   "schema": 1,
-  "built_at": "2026-11-25T21:56:15+08:00",
+  "built_at": "2026-11-26T14:17:44+08:00",
   "source_wiki": "/home/mila/fgo-wiki",
-  "source_commit": "91cf6298b43b5bc17b938575b5a04e7364b06abf",
+  "source_commit": "07f67c422ddfe8fa086fa0db5722a0f120952678",
   "counts": {
     "servants": 945,
     "ce": 2617,
     "events": 401,
     "gacha": 91
   },
-  "db_size": 1699840,
+  "db_size": 2551808,
   "frozen": false
 }

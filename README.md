@@ -43,8 +43,14 @@ git clone <本仓库地址> FGOUID
 
 ```bash
 python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki
-python tools/sync_from_wiki.py --wiki /path/to/fgo-wiki --freeze   # 发布快照
+python tools/sync_gacha.py --wiki /path/to/fgo-wiki    # 回填卡池 UP/横幅、活动名/横幅
+python tools/sync_cards.py                            # 从者卡模型（复用 wiki 解析器）
+python tools/sync_bondce.py                           # 羁绊礼装反查表
 ```
+
+`sync_gacha.py` 只读 wiki 的 `raw/`（不碰 MD）：卡池 UP 从者、卡池横幅（jsdelivr 上的
+`karl2829/fgo-images`）、活动正式名与横幅都从这里回填；wiki 里 UP 空着、活动名写成 ID
+的条目会在这步补上。
 
 - 数据修正不写回 fgo-wiki，统一放在 `overrides/`（别名）或后续的修正层里
 
