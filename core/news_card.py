@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import html as _html
 import json
+from datetime import date
 import re
 from pathlib import Path
 
@@ -41,22 +42,26 @@ def news_html(item: dict) -> str:
     when = item.get("start_at") or ""
     if when:
         meta.append(f"维护日　{esc(when)}")
-    facts = []
+    WEEK = "一二三四五六日"
+
+    def _weekday(d: str) -> str:
+        try:
+            y, m, dd = int(d[0:4]), int(d[5:7]), int(d[8:10])
+            return "周" + WEEK[date(y, m, dd).weekday()]
+        except Exception:
+            return ""
+
     ms, me = (item.get("maint_start") or ""), (item.get("maint_end") or "")
+    time_band = ""
     if ms:
-        span = f"{ms}" + (f" ～ {me[11:]}" if me and me[:10] == ms[:10] else (f" ～ {me}" if me else ""))
-        facts.append(("维护时间", span, True))
-    if item.get("comp"):
-        facts.append(("补偿内容", item["comp"], False))
-    if item.get("comp_time"):
-        facts.append(("发放时间", item["comp_time"], False))
-    facts_html = ""
-    if facts:
-        facts_html = '<div class="facts">' + "".join(
-            f'<div class="f"><i>{k}</i><b{" class=\"hl\"" if hl else ""}>{esc(v)}</b></div>'
-            for k, v, hl in facts
-        ) + "</div>"
-    sections = ""
+        day, hm = ms[:10], ms[11:]
+        end_txt = me[11:] if (me and me[:10] == day) else (me or "")
+        pretty = f"{int(day[5:7])}月{int(day[8:10])}日"
+        time_band = (f'<div class="band"><span class="k">维 护 时 间</span>'
+                     f'<span class="v">{hm}'
+                     f'<small>～ {end_txt}　·　{pretty} {_weekday(day)}</small></span></div>')
+
+    items_block = ""
     try:
         items = json.loads(item.get("contents") or "[]")
     except Exception:
@@ -66,11 +71,25 @@ def news_html(item: dict) -> str:
             f'<div class="it"><i>{i}</i><span>{esc(x)}</span></div>'
             for i, x in enumerate(items[:12], start=1)
         )
-        sections += ('<div class="sec"><div class="st"><s></s>维 护 内 容</div>'
-                     f'<div class="items">{rows}</div></div>')
-    if item.get("comp_to"):
-        sections += ('<div class="sec"><div class="st"><s></s>补 偿 对 象</div>'
-                     f'<div class="items"><div class="it"><span>{esc(item["comp_to"])}</span></div></div></div>')
+        items_block = (f'<div class="block"><div class="bh"><i></i><b>维护内容</b>'
+                       f'<s>{len(items)} 项</s></div><div class="items">{rows}</div></div>')
+
+    comp = (item.get("comp") or "").strip()
+    comp_time = (item.get("comp_time") or "").strip()
+    comp_to = (item.get("comp_to") or "").strip()
+    comp_block = ""
+    if comp or comp_time or comp_to:
+        rows = []
+        if comp:
+            rows.append(f'<div class="row"><i>补偿内容</i><b class="hl">{esc(comp)}</b></div>')
+        if comp_time:
+            rows.append(f'<div class="row"><i>发放时间</i><b>{esc(comp_time)}</b></div>')
+        if comp_to:
+            rows.append(f'<div class="row"><i>补偿对象</i><b>{esc(comp_to)}</b></div>')
+        comp_block = ('<div class="block"><div class="bh"><i></i><b>维护补偿</b></div>'
+                      f'<div class="comp">{"".join(rows)}</div></div>')
+
+    note = esc(summary[:120]) if summary else ""
 
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
@@ -79,8 +98,10 @@ def news_html(item: dict) -> str:
         "META": "<span>　·　</span>".join(meta),
         "SUMMARY": esc(summary) or "（该公告没有正文摘要，点下面链接看原文）",
         "SOURCE": SOURCE,
-        "FACTS": facts_html,
-        "SECTIONS": sections,
+        "TIME_BAND": time_band,
+        "ITEMS_BLOCK": items_block,
+        "COMP_BLOCK": comp_block,
+        "NOTE": note,
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
