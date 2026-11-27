@@ -112,11 +112,15 @@ def _axis(m: dict) -> str:
     mnts = _maint_items(m["rows"])
 
     marks = [(m["today"], "today", f'{m["today"].month}-{m["today"].day:02d} 今天')]
-    if upcoming:
-        d = upcoming[0]["_s"]
-        marks.append((d, "start", f'{d.month}-{d.day:02d} 新活动'))
-    for d in sorted({r["_s"] for r in mnts}):
-        marks.append((d, "mnt", f'{d.month}-{d.day:02d} 维护'))
+    up_d = upcoming[0]["_s"] if upcoming else None
+    mnt_d = min((r["_s"] for r in mnts), default=None)
+    if up_d and mnt_d == up_d:
+        marks.append((up_d, "mnt", f'{up_d.month}-{up_d.day:02d} 开新 / 维护'))
+    else:
+        if up_d:
+            marks.append((up_d, "start", f'{up_d.month}-{up_d.day:02d} 新活动'))
+        if mnt_d:
+            marks.append((mnt_d, "mnt", f'{mnt_d.month}-{mnt_d.day:02d} 维护'))
 
     out = []
     tops = (2, 20, 36, 52)
@@ -241,7 +245,9 @@ def _sections(m: dict) -> str:
         block("即将开始", "U P C O M I N G", upcoming, lines=_line(upcoming[0]["_s"], m, "start"))
     if mnts:
         d = min(r["_s"] for r in mnts)
-        block("停机维护", "M A I N T.", mnts, lines=_line(d, m, "mnt"), kind_cls="mnt-title")
+        same = upcoming and upcoming[0]["_s"] == d
+        block("停机维护", "M A I N T.", mnts,
+              lines="" if same else _line(d, m, "mnt"), kind_cls="mnt-title")
     return "".join(out)
 
 
