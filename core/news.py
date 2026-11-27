@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS news(
     maint_end   TEXT NOT NULL DEFAULT '',  -- 维护结束
     comp       TEXT NOT NULL DEFAULT '',   -- 补偿内容
     comp_time  TEXT NOT NULL DEFAULT '',   -- 发放时间
+    intro      TEXT NOT NULL DEFAULT '',   -- 正文开场白（详情页第一个【小标题】之前）
     contents   TEXT NOT NULL DEFAULT '',   -- 维护内容（JSON 数组）
     comp_to    TEXT NOT NULL DEFAULT ''    -- 补偿对象
 );
@@ -64,7 +65,7 @@ def _conn() -> sqlite3.Connection:
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
     for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time",
-                "contents", "comp_to"):
+                "contents", "comp_to", "intro"):
         if col not in cols:
             con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
     con.commit()
@@ -249,7 +250,7 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
     done = 0
     try:
         rows = con.execute(
-            "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND contents = ''))"
+            "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND (contents = '' OR intro = '')))"
             " AND substr(ctime,1,10) >= ? ORDER BY ctime DESC LIMIT ?",
             (cutoff, max(1, budget)),
         ).fetchall()
@@ -258,6 +259,7 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             if not html:
                 continue
             head, sec = split_sections(html)
+            intro = re.sub(r"\s*\n\s*", " ", head or "").strip()[:400]
             start, end = r["start_at"], r["end_at"]
             mstart = mend = comp = ctime_s = comp_to = ""
             items_json = ""
@@ -278,10 +280,10 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                 start, end = parse_span(head + "\n" + html, r["ctime"])
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
-                " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=? WHERE id=?",
+                " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=? WHERE id=?",
                 (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
                  mstart, mend, comp.replace("\n", " ")[:120], ctime_s, items_json, comp_to,
-                 r["id"]),
+                 intro, r["id"]),
             )
             done += 1
             time.sleep(1.2)                      # 别把人家接口打疼

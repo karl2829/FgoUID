@@ -89,19 +89,19 @@ def news_html(item: dict) -> str:
         comp_block = ('<div class="block"><div class="bh"><i></i><b>维护补偿</b></div>'
                       f'<div class="comp">{"".join(rows)}</div></div>')
 
-    note = esc(summary[:120]) if summary else ""
+    intro = (item.get("intro") or "").strip() or summary
+    note = esc(intro[:260]) + ("……" if len(intro) > 260 else "") if intro else ""
 
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "TITLE": esc(title),
         "KIND": KIND_CN.get(item.get("kind", ""), esc(item.get("kind", "公告"))),
         "META": "<span>　·　</span>".join(meta),
-        "SUMMARY": esc(summary) or "（该公告没有正文摘要，点下面链接看原文）",
         "SOURCE": SOURCE,
         "TIME_BAND": time_band,
         "ITEMS_BLOCK": items_block,
         "COMP_BLOCK": comp_block,
-        "NOTE": note,
+        "SUMMARY": note,
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
