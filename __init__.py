@@ -644,15 +644,13 @@ async def _notice_push_once() -> int:
             png = await asyncio.wait_for(get_news_png(item, "std"), timeout=25)
         except Exception as e:
             logger.warning(f"[FGOUID] 公告卡渲染失败，改发文字：{e}")
-        caption = (f"【FGO 维护公告】{item['title']}"
-                   + (f"\n维护日：{when}" if when else "")
-                   + "\nhttps://game.bilibili.com/fgo/news.html")
+        caption = f"【FGO 维护公告】{item['title']}" + (f"\n维护日：{when}" if when else "")
         ok = False
         for sub in subs:
             try:
-                if png:
-                    ret = await sub.send([MessageSegment.image(png), MessageSegment.text(caption)])
-                else:
+                if png:                       # 正常只发图，文字说明没人看
+                    ret = await sub.send(MessageSegment.image(png))
+                else:                         # 出图失败才退化成一句话
                     ret = await sub.send(caption)
                 if ret == -1:                    # 机器人不在线，Subscribe.send 返回 -1
                     logger.warning(f"[FGOUID] 推送失败：bot {sub.bot_id} 未连接（组 {sub.group_id}）")
