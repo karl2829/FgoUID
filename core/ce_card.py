@@ -92,6 +92,7 @@ def ce_model(ce: dict, detail: dict | None, lang: str = "zh") -> dict:
         "cost": ce.get("cost"),
         "type": CE_TYPE_LABEL.get(ce.get("ce_type") or "", ce.get("ce_type") or ""),
         "collection_no": detail.get("collection_no") or 0,
+        "acquisition": detail.get("acquisition") or "",
         "lv_max": detail.get("lv_max") or 0,
         "atk": [detail.get("atk_base") or 0, detail.get("atk_max") or 0],
         "hp": [detail.get("hp_base") or 0, detail.get("hp_max") or 0],
@@ -118,6 +119,9 @@ def ce_html(model: dict) -> str:
         chips.append(f'<span class="chip dim">COST {esc(str(model["cost"]))}</span>')
     if model["collection_no"]:
         chips.append(f'<span class="chip dim">No.{int(model["collection_no"]):03d}</span>')
+    acq = model.get("acquisition") or ""
+    if acq:
+        chips.append(f'<span class="chip">{esc(acq)}</span>')
     if model["region"] and model["region"] != "CN":
         chips.append(f'<span class="chip dim">{esc(model["region"])}</span>')
 

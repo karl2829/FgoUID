@@ -75,8 +75,22 @@ def _effects(raw: dict) -> list[dict]:
     return out
 
 
+def _acq_map(wiki: Path) -> dict:
+    """Mooncell 礼装获取途径快照：图鉴编号 → type（期间限定/卡池常驻/牵绊…）。"""
+    p = wiki / "raw" / "acquisition" / "ces.json"
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+        return {k: (v.get("type") or "").strip() for k, v in d.items()}
+    except Exception:
+        return {}
+
+
 def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
     con.executescript(SCHEMA)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(ce_details)")}
+    if "acquisition" not in cols:                       # 老库补列
+        con.execute("ALTER TABLE ce_details ADD COLUMN acquisition TEXT")
+    acq = _acq_map(wiki)
     total = kept = 0
     for region in regions:
         files = sorted((wiki / "raw" / "craft-essences" / region).glob("*.json"))
@@ -94,8 +108,8 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
                 continue
             con.execute(
                 "INSERT OR REPLACE INTO ce_details (id, region, collection_no, name_jp,"
-                " art_url, icon_url, atk_base, atk_max, hp_base, hp_max, lv_max, effects)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                " art_url, icon_url, atk_base, atk_max, hp_base, hp_max, lv_max, effects, acquisition)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     str(raw.get("id") or f.stem), region,
                     raw.get("collectionNo"), raw.get("originalName") or "",
@@ -104,6 +118,7 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
                     int(raw.get("hpBase") or 0), int(raw.get("hpMax") or 0),
                     int(raw.get("lvMax") or 0),
                     json.dumps(effects, ensure_ascii=False),
+                    acq.get(str(raw.get("collectionNo") or ""), ""),
                 ),
             )
             kept += 1
