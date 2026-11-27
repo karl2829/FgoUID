@@ -23,11 +23,12 @@ KINDS = (
     ("维护", "维　护", "M A I N T.", "c-mnt"),
 )
 PAD_X = 44             # 模板 .inner 的左右 padding
-LABEL_W = 150          # 左侧分类列
-DATES_W = 0            # 日期改画在条块两端，不再占右列
+LABEL_W = 0            # 分类标题改成整行表头，不再占左侧列
+NAME_W = 372           # 名称列
+STATUS_W = 112         # 右侧「截止 xx」列
 CARD_W = 1080
-BARS_X = LABEL_W
-BARS_W = CARD_W - PAD_X * 2 - LABEL_W - DATES_W   # 条块区实际宽度(px)
+BARS_X = NAME_W
+BARS_W = CARD_W - PAD_X * 2 - NAME_W - STATUS_W   # 条块区实际宽度(px)
 
 
 def _text_width(text: str, size: float = 15.0) -> float:
@@ -155,8 +156,22 @@ def _maint_items(rows: list[dict]) -> list[dict]:
     return sorted(seen.values(), key=lambda r: r["_s"])
 
 
+def _status(it: dict, today) -> tuple[str, str]:
+    """右侧状态：进行中显示截止日，未开始显示开始日，无终点显示「起」。"""
+    d1 = f'{it["_s"].month:02d}-{it["_s"].day:02d}'
+    if not it.get("end_at"):
+        return f'{d1} 起', ""
+    d2 = f'{it["_e"].month:02d}-{it["_e"].day:02d}'
+    if str(it.get("end_guess") or "0").strip() == "1":
+        d2 = "≈" + d2
+    if it["_s"] > today:
+        return f'{d1} 开始', ""
+    left = (it["_e"] - today).days
+    hot = left <= 3
+    return f'截止 {d2}', (" hot" if hot else "")
+
+
 def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -> str:
-    """每条活动独占一行：条块按日期定位，标题永远跟着条块，右侧固定列放日期。"""
     if kind == "维护":
         items = _maint_items(rows)
     else:
@@ -170,56 +185,23 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -
         left = _pct(s_clamped, m)
         width = max(_pct(it["_e"], m) - left, 0.6)
         title = _clean(it.get("title", ""))
-        d1 = f'{it["_s"].month:02d}-{it["_s"].day:02d}'
-        d2 = f'{it["_e"].month:02d}-{it["_e"].day:02d}'
-        open_end = not it.get("end_at")
-        if str(it.get("end_guess") or "0").strip() == "1":
-            d2 = "≈" + d2
-        bar_px = BARS_W * width / 100
-
+        status, hot = _status(it, m["today"])
         if kind == "维护":
             hour = f' {it["_hour"]}' if it.get("_hour") else ""
-            text = f'{d1}{hour} 维护'
-            lab_left = left + width + 0.8
-            size = _fit_font(text, BARS_W - bar_px - (BARS_W * left / 100) - 14)
-            bar = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
-                   f'<div class="lab" style="left:{min(lab_left, 88):.3f}%;font-size:{size:.1f}px">'
-                   f'<b>{text}</b></div>')
-            body.append(f'<div class="row mnt"><div class="area">{bar}</div></div>')
-            continue
+            title = "维护"
+            status = f'{it["_s"].month:02d}-{it["_s"].day:02d}{hour}'
+            hot = ""
+        bar = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
+               f'<span class="cap"></span></div>')
+        body.append(
+            f'<div class="row{" mnt" if kind == "维护" else ""}">'
+            f'<div class="name">{_html.escape(title)}</div>'
+            f'<div class="area">{bar}</div>'
+            f'<div class="status{hot}">{status}</div></div>')
 
-        if open_end:                                  # 没有结束时间：起点标记「12-01 起」
-            text = f'{d1} 起 · {title}'
-            size = _fit_font(text, BARS_W * (100 - left) / 100 - 20)
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:0.5%"></div>'
-                     f'<div class="lab" style="left:{left + 0.9:.3f}%;font-size:{size:.1f}px">'
-                     f'<b>{_html.escape(text)}</b></div>')
-        elif bar_px >= 250 and _fit_font(title, bar_px - 110) >= 12:
-            pad = 55                                      # 两端日期占位（各 ~40px）
-            size = _fit_font(title, bar_px - pad * 2)
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
-                     f'<span class="ds">{d1}</span>'
-                     f'<span class="t" style="font-size:{size:.1f}px">{_html.escape(title)}</span>'
-                     f'<span class="de">{d2}</span></div>')
-        elif bar_px >= 110:                           # 中等：只放起止日期，标题写右边
-            text = title
-            avail = BARS_W - bar_px - (BARS_W * left / 100) - 16
-            size = _fit_font(text, max(avail, 90))
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
-                     f'<span class="ds">{d1}</span><span class="de">{d2}</span></div>'
-                     f'<div class="lab" style="left:{left + width + 0.8:.3f}%;font-size:{size:.1f}px">'
-                     f'<b>{_html.escape(text)}</b></div>')
-        else:                                         # 很窄：标记 + 右侧「日期 · 标题」
-            text = f'{d1}~{d2} · {title}'
-            avail = BARS_W - bar_px - (BARS_W * left / 100) - 16
-            size = _fit_font(text, max(avail, 90))
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{max(width, 0.6):.3f}%"></div>'
-                     f'<div class="lab" style="left:{left + max(width, 0.6) + 0.8:.3f}%;'
-                     f'font-size:{size:.1f}px"><b>{_html.escape(text)}</b></div>')
-        body.append(f'<div class="row"><div class="area">{inner}</div></div>')
-
-    return (f'<div class="lane"><div class="tag"><b>{label}</b><i>{en}</i></div>'
-            f'<div class="rows">{"".join(body)}</div></div>')
+    head = (f'<div class="lane-hd"><b>{label}</b><s>{en}</s>'
+            f'<span class="cnt">{len(items)}</i></span></div>')
+    return head + "".join(body)
 
 
 def calendar_html(items: list[dict]) -> str:
@@ -240,7 +222,7 @@ def calendar_html(items: list[dict]) -> str:
     legend = ('<div class="i"><s class="c-act"></s>活动</div>'
               '<div class="i"><s class="c-sum"></s>卡池</div>'
               '<div class="i"><s class="c-mnt"></s>维护</div>'
-              f'<div class="i" style="margin-left:auto"><s style="background:#E4573F"></s>今天</div>')
+              '<div class="i" style="margin-left:auto"><s style="background:#E4573F"></s>今天</div>')
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "SUB": sub,
