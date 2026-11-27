@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import html as _html
+import json
 import re
 from pathlib import Path
 
@@ -55,6 +56,22 @@ def news_html(item: dict) -> str:
             f'<div class="f"><i>{k}</i><b{" class=\"hl\"" if hl else ""}>{esc(v)}</b></div>'
             for k, v, hl in facts
         ) + "</div>"
+    sections = ""
+    try:
+        items = json.loads(item.get("contents") or "[]")
+    except Exception:
+        items = []
+    if items:
+        rows = "".join(
+            f'<div class="it"><i>{i}</i><span>{esc(x)}</span></div>'
+            for i, x in enumerate(items[:12], start=1)
+        )
+        sections += ('<div class="sec"><div class="st"><s></s>维 护 内 容</div>'
+                     f'<div class="items">{rows}</div></div>')
+    if item.get("comp_to"):
+        sections += ('<div class="sec"><div class="st"><s></s>补 偿 对 象</div>'
+                     f'<div class="items"><div class="it"><span>{esc(item["comp_to"])}</span></div></div></div>')
+
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "TITLE": esc(title),
@@ -63,6 +80,7 @@ def news_html(item: dict) -> str:
         "SUMMARY": esc(summary) or "（该公告没有正文摘要，点下面链接看原文）",
         "SOURCE": SOURCE,
         "FACTS": facts_html,
+        "SECTIONS": sections,
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]

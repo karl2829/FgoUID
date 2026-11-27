@@ -42,7 +42,9 @@ CREATE TABLE IF NOT EXISTS news(
     maint_start TEXT NOT NULL DEFAULT '',  -- 维护开始 YYYY-MM-DD HH:MM
     maint_end   TEXT NOT NULL DEFAULT '',  -- 维护结束
     comp       TEXT NOT NULL DEFAULT '',   -- 补偿内容
-    comp_time  TEXT NOT NULL DEFAULT ''    -- 发放时间
+    comp_time  TEXT NOT NULL DEFAULT '',   -- 发放时间
+    contents   TEXT NOT NULL DEFAULT '',   -- 维护内容（JSON 数组）
+    comp_to    TEXT NOT NULL DEFAULT ''    -- 补偿对象
 );
 CREATE INDEX IF NOT EXISTS idx_news_start ON news(start_at);
 CREATE INDEX IF NOT EXISTS idx_news_kind ON news(kind);
@@ -61,7 +63,8 @@ def _conn() -> sqlite3.Connection:
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
-    for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time"):
+    for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time",
+                "contents", "comp_to"):
         if col not in cols:
             con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
     con.commit()
@@ -191,6 +194,19 @@ def _first_line(value: str, cut_words: tuple[str, ...] = ()) -> str:
     return ""
 
 
+def _parse_items(value: str) -> list[str]:
+    """把「1. 开启xxx 2. 关闭xxx」拆成列表。"""
+    text = (value or "").replace("\r", "\n")
+    parts = re.split(r"\n\s*(?=\d+\s*[.、．])", text)
+    items = []
+    for part in parts:
+        part = re.sub(r"^\s*\d+\s*[.、．]\s*", "", part).strip(" 　\n")
+        part = re.sub(r"\s*\n\s*", " ", part)
+        if part:
+            items.append(part[:120])
+    return items
+
+
 def _parse_maint_time(value: str) -> tuple[str, str]:
     plain = value.replace("（预计）", "").replace("(预计)", "")
     m = _TIME_PAIR.search(plain)
@@ -233,8 +249,8 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
     done = 0
     try:
         rows = con.execute(
-            "SELECT * FROM news WHERE detail_at = '' AND substr(ctime,1,10) >= ?"
-            " ORDER BY ctime DESC LIMIT ?",
+            "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND contents = ''))"
+            " AND substr(ctime,1,10) >= ? ORDER BY ctime DESC LIMIT ?",
             (cutoff, max(1, budget)),
         ).fetchall()
         for r in rows:
@@ -243,12 +259,17 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                 continue
             head, sec = split_sections(html)
             start, end = r["start_at"], r["end_at"]
-            mstart = mend = comp = ctime_s = ""
+            mstart = mend = comp = ctime_s = comp_to = ""
+            items_json = ""
             if r["kind"] == "维护":
                 mt = sec.get("维护时间") or sec.get("维护期间") or ""
                 mstart, mend = _parse_maint_time(mt)
                 comp = _first_line(sec.get("维护补偿内容") or sec.get("补偿内容") or "")
                 ctime_s = _first_line(sec.get("发放时间") or "", cut_words=("注意事项",))
+                comp_to = _first_line(sec.get("维护补偿对象") or sec.get("补偿对象") or "")
+                items = _parse_items(sec.get("维护内容") or sec.get("更新内容") or "")
+                if items:
+                    items_json = json.dumps(items, ensure_ascii=False)
                 if mstart:
                     start = mstart[:10]
                 if not end and mend:
@@ -257,9 +278,10 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                 start, end = parse_span(head + "\n" + html, r["ctime"])
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
-                " maint_end=?, comp=?, comp_time=? WHERE id=?",
+                " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=? WHERE id=?",
                 (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
-                 mstart, mend, comp.replace("\n", " ")[:120], ctime_s, r["id"]),
+                 mstart, mend, comp.replace("\n", " ")[:120], ctime_s, items_json, comp_to,
+                 r["id"]),
             )
             done += 1
             time.sleep(1.2)                      # 别把人家接口打疼
