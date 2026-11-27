@@ -44,7 +44,12 @@ h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-sp
 .axis .tk.today{width:2px;background:var(--today);box-shadow:0 0 8px rgba(228,87,63,.45)}
 .axis .tk.today span{top:0;left:4px;font-size:11px;color:#fff;background:var(--today);
   padding:2px 5px 3px;border-radius:3px}
-.gline{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.055);z-index:1}
+.sec{position:relative}
+.sl{position:absolute;top:0;bottom:0;width:2px;z-index:2;pointer-events:none}
+.sl.today{background:rgba(228,87,63,.75);box-shadow:0 0 8px rgba(228,87,63,.35)}
+.sl.start{background:rgba(120,150,235,.6)}
+.sl.mnt{background:rgba(228,87,63,.85)}
+.lane-hd b.mnt-title{color:#F0A08C}
 
 .lane-wrap{position:relative}
 .lane-wrap .vline{position:absolute;top:0;bottom:0;width:2px;background:rgba(228,87,63,.5);z-index:3}

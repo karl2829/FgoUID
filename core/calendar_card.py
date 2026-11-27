@@ -106,31 +106,32 @@ def _bounds(m: dict) -> list:
 
 
 def _axis(m: dict) -> str:
-    """刻度线全画；标签按可用宽度避让，放不下就换行，仍放不下就省略。"""
-    pts = _bounds(m)
+    """只在轴上标 3 个关键时刻：今天、即将开始、停机维护。"""
+    rows = [r for r in m["rows"] if r.get("kind") == "活动"]
+    upcoming = sorted([r for r in rows if r["_s"] > m["today"]], key=lambda r: r["_s"])
+    mnts = _maint_items(m["rows"])
+
+    marks = [(m["today"], "today", f'{m["today"].month}-{m["today"].day:02d} 今天')]
+    if upcoming:
+        d = upcoming[0]["_s"]
+        marks.append((d, "start", f'{d.month}-{d.day:02d} 新活动'))
+    if mnts:
+        d = min(r["_s"] for r in mnts)
+        marks.append((d, "mnt", f'{d.month}-{d.day:02d} 维护'))
+
     out = []
-    rows_end = [-999.0, -999.0]        # 两行标签各自已占到的最右位置
-    for d in pts:
+    used: list[float] = []
+    for d, cls, label in marks:
         left = _pct(d, m)
-        is_today = d == m["today"]
-        label = f'{d.month}-{d.day:02d}'
-        need = 6.0 if not is_today else 9.5      # 估宽（百分比，11.5px 字号 5 个字符）
-        spot = None
-        for row in (0, 1):
-            if left - rows_end[row] >= need:
-                spot = row
-                break
-        if is_today:
-            spot = 0
-        cls = "tk" + (" today" if is_today else "")
-        style = f'left:{max(left, 0.2):.3f}%'
-        span = ""
-        if spot is not None:
-            rows_end[spot] = left + need
-            text = label + (" 今天" if is_today else "")
-            top = "2px" if is_today else ("18px" if spot == 0 else "34px")
-            span = f'<span style="top:{top};left:5px">{text}</span>'
-        out.append(f'<div class="{cls}" style="{style}">{span}</div>')
+        if cls == "today":
+            top = 2
+        else:
+            top = 20
+            if any(abs(left - u) < 8 for u in used):      # 同一天的两个标记错行
+                top = 36
+        used.append(left)
+        out.append(f'<div class="tk {cls}" style="left:{max(left, 0.2):.3f}%">'
+                   f'<span style="top:{top}px;left:5px">{label}</span></div>')
     return "".join(out)
 
 
@@ -198,45 +199,44 @@ def _row_html(it: dict, m: dict, kind: str) -> str:
             f'<div class="status{hot}">{status}</div></div>')
 
 
+def _line(d, m: dict, cls: str = "") -> str:
+    """段内竖线：left 按条块区坐标算，只在本段高度内。"""
+    left = BARS_X + BARS_W * _pct(d, m) / 100
+    return f'<div class="sl {cls}" style="left:{left:.1f}px"></div>'
+
+
 def _sections(m: dict) -> str:
-    """按「时间紧迫度」分段：快结束 → 进行中 → 即将开始 → 维护。"""
+    """三段：进行中 / 即将开始 / 停机维护（卡池归到 fgo卡池，这里不显示）。"""
     today = m["today"]
-    acts = [r for r in m["rows"] if r.get("kind") != "维护"]
+    acts = [r for r in m["rows"] if r.get("kind") == "活动"]
     mnts = _maint_items(m["rows"])
 
-    ending, ongoing, upcoming = [], [], []
+    ongoing, upcoming = [], []
     for r in acts:
-        if not r.get("end_at") or r["_e"] < today:
-            upcoming.append(r) if r["_s"] > today else ongoing.append(r)
-        elif r["_s"] > today:
+        if r["_s"] > today:
             upcoming.append(r)
-        elif (r["_e"] - today).days <= 3:
-            ending.append(r)
         else:
             ongoing.append(r)
-
-    ending.sort(key=lambda r: (r["_e"], r["_s"]))
     ongoing.sort(key=lambda r: (r["_e"], r["_s"]))
     upcoming.sort(key=lambda r: (r["_s"], r["_e"]))
 
     out = []
 
-    def block(title, en, rows, empty=""):
-        if not rows:                 # 空的分段直接不画，别占版面
+    def block(title, en, rows, lines="", kind_cls=""):
+        if not rows:
             return
-        out.append(f'<div class="lane-hd"><b>{title}</b><s>{en}</s>'
-                   f'<span class="cnt">{len(rows)}</span></div>')
-        if rows:
-            for r in rows:
-                out.append(_row_html(r, m, r.get("kind")))
-        elif empty:
-            out.append(f'<div class="empty">{empty}</div>')
+        out.append(f'<div class="sec"><div class="lane-hd"><b class="{kind_cls}">{title}</b>'
+                   f'<s>{en}</s><span class="cnt">{len(rows)}</span></div>'
+                   + "".join(_row_html(r, m, r.get("kind")) for r in rows)
+                   + lines + "</div>")
 
-    block("3 天内结束", "U R G E N T", ending)
-    block("进行中", "O N G O I N G", ongoing)
-    block("即将开始", "U P C O M I N G", upcoming)
+    block("进行中", "O N G O I N G", ongoing, lines=_line(today, m, "today"))
+    if upcoming:
+        block("即将开始", "U P C O M I N G", upcoming,
+              lines=_line(upcoming[0]["_s"], m, "start"))
     if mnts:
-        block("停机维护", "M A I N T.", mnts)
+        d = min(r["_s"] for r in mnts)
+        block("停机维护", "M A I N T.", mnts, lines=_line(d, m, "mnt"), kind_cls="mnt-title")
     return "".join(out)
 
 
@@ -247,7 +247,7 @@ def calendar_html(items: list[dict]) -> str:
     rows = m["rows"]
     lanes = _sections(m)
     stats = []
-    for k, label, _en, _cls in KINDS:
+    for k, label in (("活动", "活　动"), ("维护", "维　护")):
         n = sum(1 for r in rows if r.get("kind") == k)
         if n:
             stats.append(f'<div class="s"><i>{label}</i><b>{n}</b></div>')
@@ -261,7 +261,7 @@ def calendar_html(items: list[dict]) -> str:
         "SUB": sub,
         "STATS": "".join(stats),
         "AXIS": _axis(m),
-        "LANES": lanes + _grid(m),
+        "LANES": lanes,
         "LEGEND_COLOR": legend,
 
         "FOOT_L": f'共 {len(rows)} 项　·　数据来源 FGO 官网公告（B 站）',
