@@ -112,24 +112,25 @@ def _axis(m: dict) -> str:
     mnts = _maint_items(m["rows"])
 
     marks = [(m["today"], "today", f'{m["today"].month}-{m["today"].day:02d} 今天')]
-    if upcoming:
-        d = upcoming[0]["_s"]
+    for d in sorted({r["_s"] for r in upcoming}):
         marks.append((d, "start", f'{d.month}-{d.day:02d} 新活动'))
-    if mnts:
-        d = min(r["_s"] for r in mnts)
+    for d in sorted({r["_s"] for r in mnts}):
         marks.append((d, "mnt", f'{d.month}-{d.day:02d} 维护'))
 
     out = []
-    used: list[float] = []
+    tops = (2, 20, 36, 52)
+    rows_end = [-999.0] * len(tops)
     for d, cls, label in marks:
         left = _pct(d, m)
-        if cls == "today":
-            top = 2
+        need = 9.0
+        top = tops[0] if cls == "today" else tops[-1]
+        for i, t in enumerate(tops if cls != "today" else tops[1:]):
+            if left - rows_end[i if cls != "today" else i + 1] >= need:
+                top = t
+                rows_end[i if cls != "today" else i + 1] = left + need
+                break
         else:
-            top = 20
-            if any(abs(left - u) < 8 for u in used):      # 同一天的两个标记错行
-                top = 36
-        used.append(left)
+            rows_end[-1] = left + need
         out.append(f'<div class="tk {cls}" style="left:{max(left, 0.2):.3f}%">'
                    f'<span style="top:{top}px;left:5px">{label}</span></div>')
     return "".join(out)
@@ -236,8 +237,9 @@ def _sections(m: dict) -> str:
     block("3 天内结束", "U R G E N T", ending, lines=_line(today, m, "today"), kind_cls="urgent-title")
     block("进行中", "O N G O I N G", ongoing, lines=_line(today, m, "today"))
     if upcoming:
+        days = sorted({r["_s"] for r in upcoming})
         block("即将开始", "U P C O M I N G", upcoming,
-              lines=_line(upcoming[0]["_s"], m, "start"))
+              lines="".join(_line(d, m, "start") for d in days))
     if mnts:
         d = min(r["_s"] for r in mnts)
         block("停机维护", "M A I N T.", mnts, lines=_line(d, m, "mnt"), kind_cls="mnt-title")
