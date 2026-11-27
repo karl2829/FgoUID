@@ -186,7 +186,7 @@ async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh",
         return None
     model = ce_model(ce, detail, lang)
     key = _cache_key(model, quality)
-    path = store.data_dir() / f"ce_{model['id']}_{key}.png"
+    path = store.data_dir() / f"ce_{model['id']}_{key}.img"
     if path.is_file():
         return path.read_bytes()
     if not render.available():
@@ -203,7 +203,7 @@ async def get_ce_png(ce: dict, detail: dict | None, lang: str = "zh",
                                   quality=quality)
     try:
         path.write_bytes(png)
-        for stale in path.parent.glob(f"ce_{model['id']}_*.png"):
+        for stale in path.parent.glob(f"ce_{model['id']}_*.img"):
             if stale.name != path.name:
                 stale.unlink(missing_ok=True)
     except Exception:

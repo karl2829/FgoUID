@@ -75,6 +75,29 @@ def _effects(raw: dict) -> list[dict]:
     return out
 
 
+def _servant_name(con: sqlite3.Connection, cno: str) -> str:
+    try:                     # 先按内部 ID（[servantName 704000] 用的是内部 ID），再按图鉴编号
+        for sql in ("SELECT name FROM servants WHERE id = ? LIMIT 1",
+                    "SELECT name FROM servants WHERE collection_no = ? AND region = 'CN' LIMIT 1"):
+            row = con.execute(sql, (cno,)).fetchone()
+            if row and row[0]:
+                return row[0]
+        return ""
+    except Exception:
+        return ""
+
+
+def _clean_lore(text: str, con: sqlite3.Connection) -> str:
+    """清理 wiki 模板残留：[servantName 503300] → 从者名；其它 markdown 链接去壳。"""
+    def repl(m):
+        name = _servant_name(con, m.group(1))
+        return f"「{name}」" if name else ""
+
+    text = re.sub(r"\[servantName\s+(\d+)\]", repl, text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _lore_of(wiki: Path, region: str, ce_id: str) -> str:
     """礼装「解说」只在 MD 里（raw 没有），压成一段。"""
     md = wiki / "entities" / "craft-essences" / region / f"{ce_id}.md"
@@ -135,7 +158,7 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
                     int(raw.get("lvMax") or 0),
                     json.dumps(effects, ensure_ascii=False),
                     acq.get(str(raw.get("collectionNo") or ""), ""),
-                    _lore_of(wiki, region, str(raw.get("id") or f.stem)),
+                    _clean_lore(_lore_of(wiki, region, str(raw.get("id") or f.stem)), con),
                 ),
             )
             kept += 1
