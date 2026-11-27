@@ -24,7 +24,7 @@ KINDS = (
 )
 PAD_X = 44             # 模板 .inner 的左右 padding
 LABEL_W = 150          # 左侧分类列
-DATES_W = 128          # 右侧日期列
+DATES_W = 0            # 日期改画在条块两端，不再占右列
 CARD_W = 1080
 BARS_X = LABEL_W
 BARS_W = CARD_W - PAD_X * 2 - LABEL_W - DATES_W   # 条块区实际宽度(px)
@@ -145,45 +145,52 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -
         left = _pct(s_clamped, m)
         width = max(_pct(it["_e"], m) - left, 0.6)
         title = _clean(it.get("title", ""))
-        span_txt = (f'{it["_s"].month}-{it["_s"].day:02d}'
-                    + (f'~{it["_e"].month}-{it["_e"].day:02d}' if it["_e"] != it["_s"] else ""))
+        d1 = f'{it["_s"].month:02d}-{it["_s"].day:02d}'
+        d2 = f'{it["_e"].month:02d}-{it["_e"].day:02d}'
+        open_end = not it.get("end_at")
+        bar_px = BARS_W * width / 100
 
         if kind == "维护":
             hour = f' {it["_hour"]}' if it.get("_hour") else ""
-            text = f'{span_txt}{hour} 维护'
-            bar_px = BARS_W * width / 100
+            text = f'{d1}{hour} 维护'
             lab_left = left + width + 0.8
-            avail = BARS_W - (bar_px + 12)
-            size = _fit_font(text, avail)
+            size = _fit_font(text, BARS_W - bar_px - (BARS_W * left / 100) - 14)
             bar = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
                    f'<div class="lab" style="left:{min(lab_left, 88):.3f}%;font-size:{size:.1f}px">'
                    f'<b>{text}</b></div>')
-            body.append(f'<div class="row mnt"><div class="area">{bar}</div>'
-                        f'<div class="dates">{span_txt}</div></div>')
+            body.append(f'<div class="row mnt"><div class="area">{bar}</div></div>')
             continue
 
-        bar_px = BARS_W * width / 100
-        inner_avail = bar_px - 26
-        right_avail = BARS_W - bar_px - (BARS_W * left / 100) - 14
-        left_avail = BARS_W * left / 100 - 10
-
-        size_in = _fit_font(title, inner_avail)
-        if size_in >= 11.5:                       # 条块够宽：整句写进块里，缩字号适配
+        if open_end:                                  # 没有结束时间：起点标记「12-01 起」
+            text = f'{d1} 起 · {title}'
+            size = _fit_font(text, BARS_W * (100 - left) / 100 - 20)
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:0.5%"></div>'
+                     f'<div class="lab" style="left:{left + 0.9:.3f}%;font-size:{size:.1f}px">'
+                     f'<b>{_html.escape(text)}</b></div>')
+        elif bar_px >= 250:                           # 宽：起止日期写在条块两端，标题居中
+            span_txt = f'{d1} → {d2}'
+            pad = 88                                      # 两端日期占位
+            size = _fit_font(title, bar_px - pad * 2)
             inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
-                     f'<span class="t" style="font-size:{size_in:.1f}px">{_html.escape(title)}</span></div>')
-        elif right_avail >= 80:                   # 块右边有地方
-            size = _fit_font(title, right_avail)
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+                     f'<span class="ds">{d1}</span>'
+                     f'<span class="t" style="font-size:{size:.1f}px">{_html.escape(title)}</span>'
+                     f'<span class="de">{d2}</span></div>')
+        elif bar_px >= 110:                           # 中等：只放起止日期，标题写右边
+            text = title
+            avail = BARS_W - bar_px - (BARS_W * left / 100) - 16
+            size = _fit_font(text, max(avail, 90))
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
+                     f'<span class="ds">{d1}</span><span class="de">{d2}</span></div>'
                      f'<div class="lab" style="left:{left + width + 0.8:.3f}%;font-size:{size:.1f}px">'
-                     f'<b>{_html.escape(title)}</b></div>')
-        else:                                     # 靠右：写左边
-            size = _fit_font(title, max(left_avail, 60))
-            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
-                     f'<div class="lab" style="right:{100 - left + 0.8:.3f}%;'
-                     f'justify-content:flex-end;font-size:{size:.1f}px">'
-                     f'<b>{_html.escape(title)}</b></div>')
-        body.append(f'<div class="row"><div class="area">{inner}</div>'
-                    f'<div class="dates">{span_txt}</div></div>')
+                     f'<b>{_html.escape(text)}</b></div>')
+        else:                                         # 很窄：标记 + 右侧「日期 · 标题」
+            text = f'{d1}~{d2} · {title}'
+            avail = BARS_W - bar_px - (BARS_W * left / 100) - 16
+            size = _fit_font(text, max(avail, 90))
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{max(width, 0.6):.3f}%"></div>'
+                     f'<div class="lab" style="left:{left + max(width, 0.6) + 0.8:.3f}%;'
+                     f'font-size:{size:.1f}px"><b>{_html.escape(text)}</b></div>')
+        body.append(f'<div class="row"><div class="area">{inner}</div></div>')
 
     return (f'<div class="lane"><div class="tag"><b>{label}</b><i>{en}</i></div>'
             f'<div class="rows">{"".join(body)}</div></div>')

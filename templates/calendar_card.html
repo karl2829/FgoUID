@@ -36,7 +36,7 @@ h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-sp
   font-variant-numeric:tabular-nums}
 
 /* 时间轴刻度 */
-.axis{position:relative;height:44px;margin:40px 128px 0 var(--label-w);
+.axis{position:relative;height:44px;margin:40px 0 0 var(--label-w);
   border-bottom:1px solid var(--line)}
 .axis .tk{position:absolute;top:0;height:44px;width:1px;background:rgba(255,255,255,.08)}
 .axis .tk span{position:absolute;top:20px;left:3px;font-size:11.5px;color:var(--text-4);
@@ -59,8 +59,11 @@ h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-sp
 .row{display:flex;align-items:center;height:42px}
 .row.mnt{height:30px}
 .row .area{position:relative;flex:1 1 auto;min-width:0;height:100%}
-.row .dates{flex:0 0 128px;text-align:right;font-size:12.5px;color:var(--text-4);
-  font-variant-numeric:tabular-nums;letter-spacing:.02em;padding-left:10px}
+.bar .ds,.bar .de{font-size:11.5px;color:rgba(255,255,255,.86);letter-spacing:.02em;
+  font-variant-numeric:tabular-nums;flex:0 0 auto}
+.bar .ds{margin-right:10px}
+.bar .de{margin-left:10px}
+.bar .t{flex:1 1 auto;text-align:center;min-width:0}
 .row .bar{top:6px;height:30px}
 .row.mnt .bar{top:2px;height:26px}
 .row .lab{top:0;height:100%;line-height:42px}
