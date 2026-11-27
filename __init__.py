@@ -1,6 +1,7 @@
 """FGOUID — FGO 查询插件（GsCore 指令版）"""
 
 import asyncio
+import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
