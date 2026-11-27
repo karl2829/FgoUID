@@ -134,6 +134,10 @@ def _row(item: dict) -> dict:
     ctime = (item.get("ctime") or "").strip()
     body = item.get("content") or ""
     start, end = parse_span(body, ctime)
+    if not start:                       # 维护公告的日期写在标题里：活动维护公告（2026年11月24日 14时）
+        m = _DATE.search(title)
+        if m:
+            start = _mk_date(m.group(1), m.group(2), m.group(3))
     return {
         "id": str(item.get("id")),
         "title": title,
@@ -234,6 +238,21 @@ def calendar(limit: int = 15) -> list[dict]:
     try:
         rows = con.execute(
             "SELECT * FROM news WHERE kind = '活动' AND start_at != ''"
+            " AND (end_at = '' OR end_at >= ?) ORDER BY start_at, ctime LIMIT ?",
+            (today, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        con.close()
+
+
+def timeline(limit: int = 60) -> list[dict]:
+    """日历卡用：当前 + 未来的活动/召唤/维护（都要求有开始日期）。"""
+    today = date.today().isoformat()
+    con = _conn()
+    try:
+        rows = con.execute(
+            "SELECT * FROM news WHERE kind IN ('活动','召唤','维护') AND start_at != ''"
             " AND (end_at = '' OR end_at >= ?) ORDER BY start_at, ctime LIMIT ?",
             (today, limit),
         ).fetchall()

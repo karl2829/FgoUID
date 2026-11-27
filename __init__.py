@@ -636,13 +636,22 @@ async def _notice_push_once() -> int:
     sent = 0
     for item in pending:
         when = item.get("start_at") or (item.get("ctime") or "")[:10]
-        text = (f"【FGO 维护公告】\n{item['title']}\n发布：{item.get('ctime', '')[:16]}"
-                + (f"\n维护日：{when}" if when else "")
-                + (f"\n\n{item['summary'][:280]}" if item.get("summary") else "")
-                + "\n\n官网：https://game.bilibili.com/fgo/news.html")
+        png = None
+        try:
+            from .core.news_card import get_news_png
+
+            png = await asyncio.wait_for(get_news_png(item, "std"), timeout=25)
+        except Exception as e:
+            logger.warning(f"[FGOUID] 公告卡渲染失败，改发文字：{e}")
+        caption = (f"【FGO 维护公告】{item['title']}"
+                   + (f"\n维护日：{when}" if when else "")
+                   + "\nhttps://game.bilibili.com/fgo/news.html")
         for sub in subs:
             try:
-                await sub.send(text)
+                if png:
+                    await sub.send([MessageSegment.image(png), MessageSegment.text(caption)])
+                else:
+                    await sub.send(caption)
                 sent += 1
             except Exception as e:
                 logger.warning(f"[FGOUID] 公告推送失败：{e}")
@@ -701,10 +710,21 @@ def calendar_text(limit: int = 12) -> str:
 @sv.on_fullmatch(("fgo日历", "fgo活动日历"), block=True)
 async def fgo_calendar(bot: Bot, ev: Event):
     try:
-        if not news_mod.calendar(1):                  # 库空就先抓一次
-            await asyncio.to_thread(news_mod.sync, 3)
+        if not news_mod.timeline(1):                  # 库空就先抓一次
+            await asyncio.to_thread(news_mod.sync, 4)
     except Exception as e:
         logger.warning(f"[FGOUID] 日历首次抓取失败：{e}")
+
+    if image_on(ev):
+        try:
+            from .core.calendar_card import get_calendar_png
+
+            png = await asyncio.wait_for(
+                get_calendar_png(news_mod.timeline(), quality_of(ev)), timeout=40)
+            if png:
+                return await bot.send(MessageSegment.image(png))
+        except Exception as e:
+            logger.warning(f"[FGOUID] 日历卡渲染失败，改发文字：{e}")
     await bot.send(calendar_text())
 
 
