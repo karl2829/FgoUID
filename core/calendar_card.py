@@ -112,7 +112,8 @@ def _axis(m: dict) -> str:
     mnts = _maint_items(m["rows"])
 
     marks = [(m["today"], "today", f'{m["today"].month}-{m["today"].day:02d} 今天')]
-    for d in sorted({r["_s"] for r in upcoming}):
+    if upcoming:
+        d = upcoming[0]["_s"]
         marks.append((d, "start", f'{d.month}-{d.day:02d} 新活动'))
     for d in sorted({r["_s"] for r in mnts}):
         marks.append((d, "mnt", f'{d.month}-{d.day:02d} 维护'))
@@ -237,9 +238,7 @@ def _sections(m: dict) -> str:
     block("3 天内结束", "U R G E N T", ending, lines=_line(today, m, "today"), kind_cls="urgent-title")
     block("进行中", "O N G O I N G", ongoing, lines=_line(today, m, "today"))
     if upcoming:
-        days = sorted({r["_s"] for r in upcoming})
-        block("即将开始", "U P C O M I N G", upcoming,
-              lines="".join(_line(d, m, "start") for d in days))
+        block("即将开始", "U P C O M I N G", upcoming, lines=_line(upcoming[0]["_s"], m, "start"))
     if mnts:
         d = min(r["_s"] for r in mnts)
         block("停机维护", "M A I N T.", mnts, lines=_line(d, m, "mnt"), kind_cls="mnt-title")
