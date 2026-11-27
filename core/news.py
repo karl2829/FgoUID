@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import time
 import urllib.request
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -36,7 +37,12 @@ CREATE TABLE IF NOT EXISTS news(
     end_at    TEXT NOT NULL DEFAULT '',
     summary   TEXT NOT NULL DEFAULT '',
     pushed    INTEGER NOT NULL DEFAULT 0,
-    fetched_at TEXT NOT NULL DEFAULT ''
+    fetched_at TEXT NOT NULL DEFAULT '',
+    detail_at TEXT NOT NULL DEFAULT '',    -- 详情页抓取时间（空 = 没抓过）
+    maint_start TEXT NOT NULL DEFAULT '',  -- 维护开始 YYYY-MM-DD HH:MM
+    maint_end   TEXT NOT NULL DEFAULT '',  -- 维护结束
+    comp       TEXT NOT NULL DEFAULT '',   -- 补偿内容
+    comp_time  TEXT NOT NULL DEFAULT ''    -- 发放时间
 );
 CREATE INDEX IF NOT EXISTS idx_news_start ON news(start_at);
 CREATE INDEX IF NOT EXISTS idx_news_kind ON news(kind);
@@ -54,6 +60,11 @@ def _conn() -> sqlite3.Connection:
     con = sqlite3.connect(p)
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
+    cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
+    for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time"):
+        if col not in cols:
+            con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+    con.commit()
     return con
 
 
@@ -129,6 +140,68 @@ def fetch(pages: int = 3, timeout: int = 20) -> list[dict]:
     return out
 
 
+DETAIL_API = "https://api.biligame.com/news/{id}"
+_SECTION = re.compile(r"【([^】]{1,12})】")
+_TIME_PAIR = re.compile(
+    r"(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2})[:：](\d{2})"
+    r"\s*[～~\-—至]\s*(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日\s*(\d{1,2})[:：](\d{2})")
+
+
+def fetch_detail(nid: str, timeout: int = 20) -> str:
+    """公告详情（完整正文 HTML）。列表接口的 content 是截断的摘要。"""
+    req = urllib.request.Request(DETAIL_API.format(id=nid), headers=UA)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            d = json.load(r)
+        data = d.get("data") or {}
+        return data.get("content") or ""
+    except Exception:
+        return ""
+
+
+def split_sections(html: str) -> tuple[str, dict]:
+    """按 【小标题】 切段：返回 (正文前缀, {标题: 内容})。"""
+    text = re.sub(r"<br\s*/?>", "\n", html or "")
+    text = re.sub(r"<[^>]+>", "", text).replace("&nbsp;", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    marks = list(_SECTION.finditer(text))
+    if not marks:
+        return text.strip(), {}
+    head = text[:marks[0].start()].strip()
+    out = {}
+    for i, m in enumerate(marks):
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+        body = text[m.end():end]
+        body = re.sub(r"\n{2,}", "\n", body).strip()
+        out[m.group(1).strip()] = body
+    return head, out
+
+
+def _first_line(value: str, cut_words: tuple[str, ...] = ()) -> str:
+    """取第一行；遇到注意事项之类的尾巴就截断。"""
+    text = (value or "").replace("\r", "\n")
+    for w in cut_words:
+        idx = text.find(w)
+        if idx > 0:
+            text = text[:idx]
+    for line in text.split("\n"):
+        line = line.strip(" ·-　")
+        if line:
+            return line[:80]
+    return ""
+
+
+def _parse_maint_time(value: str) -> tuple[str, str]:
+    plain = value.replace("（预计）", "").replace("(预计)", "")
+    m = _TIME_PAIR.search(plain)
+    if not m:
+        return "", ""
+    y, mo, d, h, mi, y2, mo2, d2, h2, mi2 = m.groups()
+    start = f"{int(y):04d}-{int(mo):02d}-{int(d):02d} {int(h):02d}:{mi}"
+    end = f"{int(y2 or y):04d}-{int(mo2):02d}-{int(d2):02d} {int(h2):02d}:{mi2}"
+    return start, end
+
+
 def _row(item: dict) -> dict:
     title = (item.get("title") or "").strip()
     ctime = (item.get("ctime") or "").strip()
@@ -149,7 +222,54 @@ def _row(item: dict) -> dict:
     }
 
 
-def sync(pages: int = 3) -> dict:
+def _needs_detail(row: dict) -> bool:
+    return (not row.get("start_at")) or row["kind"] in ("维护", "召唤")
+
+
+def refresh_details(budget: int = 25, window_days: int = 45) -> int:
+    """给「没日期 / 维护 / 召唤」的公告补抓详情页（列表接口正文是截断的）。"""
+    cutoff = (date.today() - timedelta(days=window_days)).isoformat()
+    con = _conn()
+    done = 0
+    try:
+        rows = con.execute(
+            "SELECT * FROM news WHERE detail_at = '' AND substr(ctime,1,10) >= ?"
+            " ORDER BY ctime DESC LIMIT ?",
+            (cutoff, max(1, budget)),
+        ).fetchall()
+        for r in rows:
+            html = fetch_detail(r["id"])
+            if not html:
+                continue
+            head, sec = split_sections(html)
+            start, end = r["start_at"], r["end_at"]
+            mstart = mend = comp = ctime_s = ""
+            if r["kind"] == "维护":
+                mt = sec.get("维护时间") or sec.get("维护期间") or ""
+                mstart, mend = _parse_maint_time(mt)
+                comp = _first_line(sec.get("维护补偿内容") or sec.get("补偿内容") or "")
+                ctime_s = _first_line(sec.get("发放时间") or "", cut_words=("注意事项",))
+                if mstart:
+                    start = mstart[:10]
+                if not end and mend:
+                    end = mend[:10]
+            elif not start:
+                start, end = parse_span(head + "\n" + html, r["ctime"])
+            con.execute(
+                "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
+                " maint_end=?, comp=?, comp_time=? WHERE id=?",
+                (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
+                 mstart, mend, comp.replace("\n", " ")[:120], ctime_s, r["id"]),
+            )
+            done += 1
+            time.sleep(1.2)                      # 别把人家接口打疼
+        con.commit()
+    finally:
+        con.close()
+    return done
+
+
+def sync(pages: int = 3, details: int = 25) -> dict:
     """抓取并写库，返回新增条数与新增的维护公告列表。"""
     items = fetch(pages)
     if not items:
@@ -176,6 +296,8 @@ def sync(pages: int = 3) -> dict:
         cleanup(con)
     finally:
         con.close()
+    if details:
+        refresh_details(budget=details)
     maint = [r for r in new_rows if r["kind"] == "维护"]
     return {"fetched": len(items), "new": maint, "new_count": len(new_rows)}
 
@@ -254,11 +376,19 @@ def timeline(limit: int = 60) -> list[dict]:
         rows = con.execute(
             "SELECT * FROM news WHERE kind IN ('活动','召唤','维护') AND start_at != ''"
             " AND (end_at = '' OR end_at >= ?) ORDER BY start_at, ctime LIMIT ?",
-            (today, limit),
+            (today, limit * 2),
         ).fetchall()
-        return [dict(r) for r in rows]
     finally:
         con.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        if d["kind"] == "维护":
+            when = (d.get("maint_start") or d.get("start_at") or "")[:10]
+            if when < today:            # 已经过去的维护没意义
+                continue
+        out.append(d)
+    return out[:limit]
 
 
 def dateless_count() -> int:

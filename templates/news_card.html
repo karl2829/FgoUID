@@ -29,6 +29,11 @@ h1{font-size:34px;line-height:1.32;color:var(--ink);margin-top:16px;letter-spaci
 
 .body{margin-top:20px;font-size:16px;line-height:1.85;color:var(--ink-2)}
 .body .tx{display:-webkit-box;overflow:hidden}
+.facts{margin-top:18px;border-top:1px solid var(--line)}
+.facts .f{display:flex;align-items:baseline;gap:16px;padding:11px 0;border-bottom:1px solid var(--line)}
+.facts .f i{flex:0 0 96px;font-style:normal;font-size:14px;color:var(--ink-3);letter-spacing:.06em}
+.facts .f b{flex:1 1 auto;font-weight:400;font-size:17px;color:var(--ink);letter-spacing:.01em}
+.facts .f b.hl{color:var(--accent)}
 .foot{display:flex;align-items:center;justify-content:space-between;
   margin-top:26px;padding-top:16px;border-top:1px solid var(--line)}
 .foot .l{font-size:12.5px;color:var(--ink-3);letter-spacing:.02em}
@@ -48,6 +53,7 @@ h1{font-size:34px;line-height:1.32;color:var(--ink);margin-top:16px;letter-spaci
 
 <div class="rule"></div>
 <div class="body"><div class="tx">{{SUMMARY}}</div></div>
+{{FACTS}}
 
 <div class="foot">
   <div class="l">{{SOURCE}}</div>

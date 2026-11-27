@@ -40,6 +40,21 @@ def news_html(item: dict) -> str:
     when = item.get("start_at") or ""
     if when:
         meta.append(f"维护日　{esc(when)}")
+    facts = []
+    ms, me = (item.get("maint_start") or ""), (item.get("maint_end") or "")
+    if ms:
+        span = f"{ms}" + (f" ～ {me[11:]}" if me and me[:10] == ms[:10] else (f" ～ {me}" if me else ""))
+        facts.append(("维护时间", span, True))
+    if item.get("comp"):
+        facts.append(("补偿内容", item["comp"], False))
+    if item.get("comp_time"):
+        facts.append(("发放时间", item["comp_time"], False))
+    facts_html = ""
+    if facts:
+        facts_html = '<div class="facts">' + "".join(
+            f'<div class="f"><i>{k}</i><b{" class=\"hl\"" if hl else ""}>{esc(v)}</b></div>'
+            for k, v, hl in facts
+        ) + "</div>"
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "TITLE": esc(title),
@@ -47,6 +62,7 @@ def news_html(item: dict) -> str:
         "META": "<span>　·　</span>".join(meta),
         "SUMMARY": esc(summary) or "（该公告没有正文摘要，点下面链接看原文）",
         "SOURCE": SOURCE,
+        "FACTS": facts_html,
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
