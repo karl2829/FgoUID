@@ -273,6 +273,17 @@ async def fgo_event(bot: Bot, ev: Event):
 async def fgo_gacha(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
     rows = list_gacha(kw)
+    if not kw:
+        # 不带关键词时优先用官网公告（数据更及时，横幅也是官网原图）
+        try:
+            from .core.gacha_card import rows_from_news
+
+            news_rows = await asyncio.to_thread(news_mod.gacha_rows, 20)
+            live = rows_from_news(news_rows)
+            if len(live) >= 2:
+                rows = live
+        except Exception as e:
+            logger.warning(f"[FGOUID] 官网卡池取数失败，回落 wiki 快照：{e}")
     if not image_on(ev):
         return await bot.send(format_gacha(rows))
     try:

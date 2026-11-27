@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS news(
     intro      TEXT NOT NULL DEFAULT '',   -- 正文开场白（详情页第一个【小标题】之前）
     end_guess  INTEGER NOT NULL DEFAULT 0, -- 结束时间是否由正文「N天内」推断
     maint_est  INTEGER NOT NULL DEFAULT 0, -- 维护时间是否带「（预计）」
+    img_url    TEXT NOT NULL DEFAULT '',   -- 公告正文里的第一张图（卡池横幅等）
     contents   TEXT NOT NULL DEFAULT '',   -- 维护内容（JSON 数组）
     comp_to    TEXT NOT NULL DEFAULT ''    -- 补偿对象
 );
@@ -67,7 +68,7 @@ def _conn() -> sqlite3.Connection:
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
     for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time",
-                "contents", "comp_to", "intro", "end_guess", "maint_est"):
+                "contents", "comp_to", "intro", "end_guess", "maint_est", "img_url"):
         if col not in cols:
             con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
     con.commit()
@@ -324,7 +325,8 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
     try:
         rows = con.execute(
             "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND (contents = '' OR intro = ''))"
-            " OR (end_at = '' AND kind IN ('活动','召唤','维护')))"
+            " OR (end_at = '' AND kind IN ('活动','召唤','维护'))"
+            " OR (kind = '召唤' AND img_url = ''))"
             " AND substr(ctime,1,10) >= ? ORDER BY ctime DESC LIMIT ?",
             (cutoff, max(1, budget)),
         ).fetchall()
@@ -333,6 +335,14 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             if not html:
                 continue
             head, sec = split_sections(html)
+            imgs = re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', html or "")
+            img_url = ""
+            for u in imgs:
+                if u.startswith("//"):
+                    u = "https:" + u
+                if u.startswith("http") and "hdslb" in u:
+                    img_url = u
+                    break
             intro = re.sub(r"\s*\n\s*", " ", head or "").strip()[:400]
             start, end = r["start_at"], r["end_at"]
             mstart = mend = comp = ctime_s = comp_to = ""
@@ -372,10 +382,10 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
                 " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=?,"
-                " end_guess=?, maint_est=? WHERE id=?",
+                " end_guess=?, maint_est=?, img_url=? WHERE id=?",
                 (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
                  mstart, mend, comp.replace("\n", " ")[:120], ctime_s, items_json, comp_to,
-                 intro, end_guess, mest, r["id"]),
+                 intro, end_guess, mest, img_url, r["id"]),
             )
             done += 1
             time.sleep(1.2)                      # 别把人家接口打疼
@@ -529,5 +539,20 @@ def stats() -> dict:
     try:
         rows = con.execute("SELECT kind, COUNT(*) c FROM news GROUP BY kind").fetchall()
         return {r["kind"]: r["c"] for r in rows}
+    finally:
+        con.close()
+
+
+def gacha_rows(limit: int = 20) -> list[dict]:
+    """官网公告里的「推荐召唤」→ 卡池行（名称/起止/横幅图）。"""
+    today = date.today().isoformat()
+    con = _conn()
+    try:
+        rows = con.execute(
+            "SELECT * FROM news WHERE kind = '召唤' AND start_at != ''"
+            " AND (end_at = '' OR end_at >= ?) ORDER BY start_at, ctime LIMIT ?",
+            (today, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         con.close()

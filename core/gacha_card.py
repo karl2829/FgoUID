@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import html as _html
+import re
 import json
 from datetime import date, timedelta
 from pathlib import Path
@@ -232,8 +233,16 @@ def _d(value: str):
         return None
 
 
-def _clean_name(name: str) -> str:
-    t = (name or "").replace("推荐召唤", "").strip("「」『』！· ")
+def _clean_name(name: str, limit: int = 46) -> str:
+    """公告标题 → 卡池名：去【限时】/引号，截到「推荐召唤」为止。"""
+    t = re.sub(r"^\s*【[^】]{1,6}】", "", name or "")
+    t = re.sub(r"[『』「」]", "", t).strip("！! ·　")
+    idx = t.find("推荐召唤")
+    if idx >= 0:
+        t = t[: idx + 4]
+    t = re.sub(r"\s+", " ", t).strip()
+    if len(t) > limit:
+        t = t[:limit].rstrip() + "…"
     return t or (name or "")
 
 
@@ -344,13 +353,31 @@ def gacha_timeline_html(sections: dict, keyword: str = "") -> str:
         "STATS": stats,
         "AXIS": axis,
         "LANES": "".join(parts),
-        "FOOT_L": f'共 {len(rows)} 期　·　数据来源 fgo-wiki 快照',
+        "FOOT_L": f'共 {len(rows)} 期　·　数据来源 FGO 官网公告',
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [x for x in html.split("{{") if "}}" in x and x.split("}}")[0].isupper()]
     if left:
         raise ValueError(f"模板还有未填充占位符：{left[:3]}")
     return html
+
+
+def rows_from_news(news_rows: list[dict]) -> list[dict]:
+    """官网公告的「推荐召唤」→ 卡池行（带横幅图 URL）。"""
+    out = []
+    for r in news_rows:
+        if not r.get("start_at"):
+            continue
+        url = (r.get("img_url") or "").strip()
+        out.append({
+            "name": r.get("title") or "",
+            "region": "CN",
+            "up_servants": "",
+            "start_time": (r.get("start_at") or "")[:10],
+            "end_time": (r.get("end_at") or "")[:10],
+            "banner": url,
+        })
+    return [r for r in out if r["start_time"]]
 
 
 async def get_gacha_timeline_png(rows, keyword: str = "", quality: str = "std") -> bytes | None:
