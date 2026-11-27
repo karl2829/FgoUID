@@ -253,6 +253,8 @@ async def fgo_mystic(bot: Bot, ev: Event):
 @sv.on_command("fgo活动", block=True)
 async def fgo_event(bot: Bot, ev: Event):
     kw = (ev.text or "").strip()
+    if not kw:                       # 不带词 = 日历（活动 + 维护），不再单独出一张列表卡
+        return await fgo_calendar(bot, ev)
     rows = search_events(kw)
     if not image_on(ev):
         return await bot.send(format_events(rows))
