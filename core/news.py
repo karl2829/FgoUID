@@ -97,6 +97,51 @@ def _mk_date(y: int, m: int, d: int) -> str:
         return ""
 
 
+DATE_RANGE = re.compile(
+    r"(\d{4})年(\d{1,2})月(\d{1,2})日\s*(?:（[^）]*）)?\s*"
+    r"(?:(维护后)|(\d{1,2})[:：](\d{2}))?\s*"
+    r"(?:[~～\-—ー至]|〜)\s*"
+    r"(?:前\s*)?(\d{4}年)?(\d{1,2})月(\d{1,2})日\s*(?:（[^）]*）)?\s*"
+    r"(?:(\d{1,2})[:：](\d{2}))?"
+)
+_BLOCK_HDR = re.compile(r"[◆◇]\s*([^◆◇\n]{0,24})\s*[◆◇]|^(\S[^\n]{0,18})[：:]?$", re.M)
+_SKIP_LABEL = ("领取", "交换", "报名", "预约", "兑换", "补发", "发放", "购买", "领取期限")
+
+
+def parse_schedule(text: str) -> list[dict]:
+    """把正文里的「时间：A ~ B」全部抠出来，返回 [{label, start, end}]。"""
+    out = []
+    for m in DATE_RANGE.finditer(text):
+        y, mo, d, aft, sh, sm, y2, mo2, d2, eh, em = m.groups()
+        start = f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+        if sh:
+            start += f" {int(sh):02d}:{sm}"
+        end = f"{int(y2 or y):04d}-{int(mo2):02d}-{int(d2):02d}"
+        if eh:
+            end += f" {int(eh):02d}:{em}"
+        before = text[max(0, m.start() - 120):m.start()]
+        label = ""
+        for mm in _BLOCK_HDR.finditer(before):
+            cand = (mm.group(1) or mm.group(2) or "").strip()
+            if 0 < len(cand) <= 24:
+                label = cand
+        out.append({"label": label, "start": start, "end": end, "maintain": bool(aft)})
+    return out
+
+
+def pick_main_range(items: list[dict]) -> dict | None:
+    """挑主时段：优先「活动时间/举办期间」，跳过领取/交换之类。"""
+    if not items:
+        return None
+    good = [x for x in items if not any(k in x["label"] for k in _SKIP_LABEL)]
+    pool = good or items
+    for key in ("活动时间", "举办期间", "实施期间", "时间"):
+        for x in pool:
+            if key in x["label"]:
+                return x
+    return pool[0]
+
+
 def parse_span(text: str, ctime: str) -> tuple[str, str]:
     """从正文里抠出活动起止日期（只到天，够日历用）。"""
     flat = _strip_html(text)
@@ -223,7 +268,11 @@ def _row(item: dict) -> dict:
     title = (item.get("title") or "").strip()
     ctime = (item.get("ctime") or "").strip()
     body = item.get("content") or ""
-    start, end = parse_span(body, ctime)
+    sched = pick_main_range(parse_schedule(body))
+    if sched:
+        start, end = sched["start"], sched["end"]
+    else:
+        start, end = parse_span(body, ctime)
     if not start:                       # 维护公告的日期写在标题里：活动维护公告（2026年11月24日 14时）
         m = _DATE.search(title)
         if m:
@@ -276,8 +325,18 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                     start = mstart[:10]
                 if not end and mend:
                     end = mend[:10]
-            elif not start:
-                start, end = parse_span(head + "\n" + html, r["ctime"])
+            else:
+                plain = re.sub(r"<[^>]+>", "", re.sub(r"<br\s*/?>", "\n", html or ""))
+                plain = plain.replace("&nbsp;", " ")
+                sched = pick_main_range(parse_schedule(plain))
+                if sched:
+                    start, end = sched["start"], sched["end"]
+                if not items_json:                       # 活动/召唤：抓正文里的要点行
+                    bullets = [ln.strip(" 　·・■◆-") for ln in plain.splitlines()
+                               if ln.strip().startswith(("■", "◆", "・"))]
+                    bullets = [b for b in bullets if 6 <= len(b) <= 120][:12]
+                    if bullets:
+                        items_json = json.dumps(bullets, ensure_ascii=False)
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
                 " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=? WHERE id=?",

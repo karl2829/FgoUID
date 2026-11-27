@@ -63,8 +63,10 @@ def build_model(items: list[dict], today: date | None = None) -> dict:
         rows.append({**it, "_s": start, "_e": max(end, start)})
     if not rows:
         return {}
-    lo = min(min(r["_s"] for r in rows), today) - timedelta(days=3)
-    hi = max(max(r["_e"] for r in rows), today) + timedelta(days=7)
+    # 时间轴只画「今天 → 最晚结束」：过去的时间不留白，条块才够宽放标题
+    lo = today
+    latest = max(r["_e"] for r in rows)
+    hi = max(min(latest, today + timedelta(days=45)), today + timedelta(days=14))
     span = max((hi - lo).days, 1)
     return {"rows": rows, "lo": lo, "hi": hi, "span": span, "today": today}
 
@@ -80,12 +82,16 @@ def _axis(m: dict) -> str:
     step = 7 if (hi - lo).days <= 70 else 14
     while cur <= hi:
         left = _pct(cur, m)
-        if 0 <= left <= 100:
+        if 0 <= left <= 100 and left > 12:
             out.append(f'<div class="tk" style="left:{left:.3f}%">'
                        f'<span>{cur.month}-{cur.day:02d}</span></div>')
         cur += timedelta(days=step)
     left = _pct(m["today"], m)
-    out.append(f'<div class="today" style="left:{left:.3f}%"><span>今天 {m["today"].month}-{m["today"].day:02d}</span></div>')
+    if left < 12:                     # 窗口从今天开始：徽标挂右边，别被卡片裁掉
+        badge = f'<span style="left:14px">今天 {m["today"].month}-{m["today"].day:02d}</span>'
+    else:
+        badge = f'<span>今天 {m["today"].month}-{m["today"].day:02d}</span>'
+    out.append(f'<div class="today" style="left:{left:.3f}%">{badge}</div>')
     return "".join(out)
 
 
@@ -130,7 +136,8 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict,
         bars = []
         for idx, it in enumerate(lane):
             nxt = _pct(lane[idx + 1]["_s"], m) if idx + 1 < len(lane) else 100.0
-            left = _pct(it["_s"], m)
+            s_clamped = max(it["_s"], m["lo"])
+            left = _pct(s_clamped, m)
             width = max(_pct(it["_e"], m) - left, 0.7)
             title = _clean(it.get("title", ""))
             chars = 26 if width >= 40 else (18 if width >= 25 else 12)
@@ -145,7 +152,7 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict,
                     f'<b>{it["_s"].month}-{it["_s"].day:02d}'
                     f'{" " + it["_hour"] if it.get("_hour") else ""} 维护</b></div>')
                 continue
-            if width >= 26:                          # 够宽：标题写进条块
+            if width >= 20:                          # 够宽：标题写进条块
                 bars.append(
                     f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
                     f'<span class="t">{_html.escape(short)}</span>'
