@@ -634,6 +634,7 @@ async def _notice_push_once() -> int:
         return 0
 
     sent = 0
+    delivered: list[str] = []
     for item in pending:
         when = item.get("start_at") or (item.get("ctime") or "")[:10]
         png = None
@@ -646,16 +647,26 @@ async def _notice_push_once() -> int:
         caption = (f"【FGO 维护公告】{item['title']}"
                    + (f"\n维护日：{when}" if when else "")
                    + "\nhttps://game.bilibili.com/fgo/news.html")
+        ok = False
         for sub in subs:
             try:
                 if png:
-                    await sub.send([MessageSegment.image(png), MessageSegment.text(caption)])
+                    ret = await sub.send([MessageSegment.image(png), MessageSegment.text(caption)])
                 else:
-                    await sub.send(caption)
+                    ret = await sub.send(caption)
+                if ret == -1:                    # 机器人不在线，Subscribe.send 返回 -1
+                    logger.warning(f"[FGOUID] 推送失败：bot {sub.bot_id} 未连接（组 {sub.group_id}）")
+                    continue
                 sent += 1
+                ok = True
             except Exception as e:
                 logger.warning(f"[FGOUID] 公告推送失败：{e}")
-    news_mod.mark_pushed([i["id"] for i in pending])
+        if ok:
+            delivered.append(item["id"])
+        else:
+            logger.warning(f"[FGOUID] 公告「{item['title'][:20]}」未送达任何订阅，下个小时重试")
+
+    news_mod.mark_pushed(delivered)
     logger.info(f"[FGOUID] 维护公告已推送 {len(pending)} 条 → {len(subs)} 个订阅")
     return sent
 
@@ -726,6 +737,33 @@ async def fgo_calendar(bot: Bot, ev: Event):
         except Exception as e:
             logger.warning(f"[FGOUID] 日历卡渲染失败，改发文字：{e}")
     await bot.send(calendar_text())
+
+
+@sv.on_fullmatch(("fgo公告测试", "fgo推送测试"), block=True)
+async def fgo_notice_test(bot: Bot, ev: Event):
+    """把最近一条维护公告发到当前会话，用来确认推送链路。"""
+    try:
+        await asyncio.to_thread(news_mod.sync, 1)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 公告测试同步失败：{e}")
+    rows = news_mod.pending_maintenance(within_days=60)
+    if not rows:
+        con = news_mod._conn()
+        rows = [dict(r) for r in con.execute(
+            "SELECT * FROM news WHERE kind='维护' ORDER BY ctime DESC LIMIT 1").fetchall()]
+        con.close()
+    if not rows:
+        return await bot.send("还没抓到维护公告，稍后再试")
+    item = rows[0]
+    try:
+        from .core.news_card import get_news_png
+
+        png = await asyncio.wait_for(get_news_png(item, "std"), timeout=25)
+        if png:
+            return await bot.send(MessageSegment.image(png))
+    except Exception as e:
+        logger.warning(f"[FGOUID] 公告测试出图失败：{e}")
+    await bot.send(f"【FGO 维护公告】{item['title']}\n维护日：{item.get('start_at', '')}")
 
 
 @sv.on_command("fgo设置公告", block=True)
