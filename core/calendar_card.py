@@ -177,37 +177,67 @@ def _status(it: dict, today) -> tuple[str, str]:
     return f'截止 {d2}', (" hot" if hot else "")
 
 
-def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -> str:
-    if kind == "维护":
-        items = _maint_items(rows)
-    else:
-        items = sorted([r for r in rows if r.get("kind") == kind], key=lambda r: (r["_s"], r["_e"]))
-    if not items:
-        return ""
+KIND_DOT = {"活动": "c-act", "召唤": "c-sum", "维护": "c-mnt"}
 
-    body = []
-    for it in items:
-        s_clamped = max(it["_s"], m["lo"])
-        left = _pct(s_clamped, m)
-        width = max(_pct(it["_e"], m) - left, 0.6)
-        title = _clean(it.get("title", ""))
-        status, hot = _status(it, m["today"])
-        if kind == "维护":
-            hour = f' {it["_hour"]}' if it.get("_hour") else ""
-            title = "维护"
-            status = f'{it["_s"].month:02d}-{it["_s"].day:02d}{hour}'
-            hot = ""
-        bar = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
-               f'<span class="cap"></span></div>')
-        body.append(
-            f'<div class="row{" mnt" if kind == "维护" else ""}">'
-            f'<div class="name">{_html.escape(title)}</div>'
-            f'<div class="area">{bar}</div>'
+
+def _row_html(it: dict, m: dict, kind: str) -> str:
+    s_clamped = max(it["_s"], m["lo"])
+    left = _pct(s_clamped, m)
+    width = max(_pct(it["_e"], m) - left, 0.6)
+    title = _clean(it.get("title", ""))
+    status, hot = _status(it, m["today"])
+    if kind == "维护":
+        hour = f' {it["_hour"]}' if it.get("_hour") else ""
+        title = "停机维护"
+        status = f'{it["_s"].month:02d}-{it["_s"].day:02d}{hour}'
+        hot = ""
+    dot = KIND_DOT.get(kind, "c-act")
+    bar = f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+    return (f'<div class="row"><div class="name"><span class="dot {dot}"></span>'
+            f'{_html.escape(title)}</div><div class="area">{bar}</div>'
             f'<div class="status{hot}">{status}</div></div>')
 
-    head = (f'<div class="lane-hd"><b>{label}</b><s>{en}</s>'
-            f'<span class="cnt">{len(items)}</i></span></div>')
-    return head + "".join(body)
+
+def _sections(m: dict) -> str:
+    """按「时间紧迫度」分段：快结束 → 进行中 → 即将开始 → 维护。"""
+    today = m["today"]
+    acts = [r for r in m["rows"] if r.get("kind") != "维护"]
+    mnts = _maint_items(m["rows"])
+
+    ending, ongoing, upcoming = [], [], []
+    for r in acts:
+        if not r.get("end_at") or r["_e"] < today:
+            upcoming.append(r) if r["_s"] > today else ongoing.append(r)
+        elif r["_s"] > today:
+            upcoming.append(r)
+        elif (r["_e"] - today).days <= 3:
+            ending.append(r)
+        else:
+            ongoing.append(r)
+
+    ending.sort(key=lambda r: (r["_e"], r["_s"]))
+    ongoing.sort(key=lambda r: (r["_e"], r["_s"]))
+    upcoming.sort(key=lambda r: (r["_s"], r["_e"]))
+
+    out = []
+
+    def block(title, en, rows, empty=""):
+        if not rows:                 # 空的分段直接不画，别占版面
+            return
+        out.append(f'<div class="lane-hd"><b>{title}</b><s>{en}</s>'
+                   f'<span class="cnt">{len(rows)}</span></div>')
+        if rows:
+            for r in rows:
+                out.append(_row_html(r, m, r.get("kind")))
+        elif empty:
+            out.append(f'<div class="empty">{empty}</div>')
+
+    block("3 天内结束", "U R G E N T", ending)
+    block("进行中", "O N G O I N G", ongoing)
+    block("即将开始", "U P C O M I N G", upcoming)
+    if mnts:
+        block("停机维护", "M A I N T.", mnts)
+    return "".join(out)
 
 
 def calendar_html(items: list[dict]) -> str:
@@ -215,7 +245,7 @@ def calendar_html(items: list[dict]) -> str:
     if not m:
         raise ValueError("没有可上时间轴的数据")
     rows = m["rows"]
-    lanes = "".join(_lane(k, label, en, cls, rows, m) for k, label, en, cls in KINDS)
+    lanes = _sections(m)
     stats = []
     for k, label, _en, _cls in KINDS:
         n = sum(1 for r in rows if r.get("kind") == k)
