@@ -140,7 +140,7 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict,
             left = _pct(s_clamped, m)
             width = max(_pct(it["_e"], m) - left, 0.7)
             title = _clean(it.get("title", ""))
-            chars = 26 if width >= 40 else (18 if width >= 25 else 12)
+            chars = 34 if width >= 40 else (26 if width >= 30 else (18 if width >= 22 else 12))
             short = _short(title, chars)
             budget = nxt - (left + width)          # 右侧还剩多少空间放标签
             span_txt = (f'{it["_s"].month}-{it["_s"].day:02d}'
@@ -163,7 +163,8 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict,
                 if legend is not None:
                     legend.append((mark, title, span_txt))
                 bars.append(
-                    f'<div class="bar {cls}" style="left:{left:.3f}%;width:{max(width, 3.2):.3f}%">'
+                    f'<div class="bar {cls}" style="left:{left:.3f}%;width:{max(width, 4.2):.3f}%;'
+                    f'justify-content:center;padding:0">'
                     f'<span class="n">{mark}</span></div>')
         cls_row = "row mnt" if kind == "维护" else "row"
         body.append(f'<div class="{cls_row}">' + "".join(bars) + "</div>")
