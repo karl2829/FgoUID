@@ -173,7 +173,7 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -
         d1 = f'{it["_s"].month:02d}-{it["_s"].day:02d}'
         d2 = f'{it["_e"].month:02d}-{it["_e"].day:02d}'
         open_end = not it.get("end_at")
-        if it.get("end_guess"):
+        if str(it.get("end_guess") or "0").strip() == "1":
             d2 = "≈" + d2
         bar_px = BARS_W * width / 100
 
