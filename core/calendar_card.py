@@ -211,12 +211,15 @@ def _sections(m: dict) -> str:
     acts = [r for r in m["rows"] if r.get("kind") == "活动"]
     mnts = _maint_items(m["rows"])
 
-    ongoing, upcoming = [], []
+    ending, ongoing, upcoming = [], [], []
     for r in acts:
         if r["_s"] > today:
             upcoming.append(r)
+        elif r.get("end_at") and (r["_e"] - today).days <= 3:
+            ending.append(r)
         else:
             ongoing.append(r)
+    ending.sort(key=lambda r: (r["_e"], r["_s"]))
     ongoing.sort(key=lambda r: (r["_e"], r["_s"]))
     upcoming.sort(key=lambda r: (r["_s"], r["_e"]))
 
@@ -230,6 +233,7 @@ def _sections(m: dict) -> str:
                    + "".join(_row_html(r, m, r.get("kind")) for r in rows)
                    + lines + "</div>")
 
+    block("3 天内结束", "U R G E N T", ending, lines=_line(today, m, "today"), kind_cls="urgent-title")
     block("进行中", "O N G O I N G", ongoing, lines=_line(today, m, "today"))
     if upcoming:
         block("即将开始", "U P C O M I N G", upcoming,
