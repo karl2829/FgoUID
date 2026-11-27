@@ -1,0 +1,134 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+/* FGOUID 活动日历卡（时间轴 + 分类泳道）
+   引擎：pytakumi / Skia。禁写：::before/::after、blur、backdrop-filter、clip-path */
+:root{
+  --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
+  --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --text-4:#6C7A90;
+  --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227;
+  --line:#2A3B60; --today:#E4573F;
+  --g10:rgba(201,162,39,.10); --g16:rgba(201,162,39,.16); --g32:rgba(201,162,39,.32);
+  --g48:rgba(201,162,39,.48); --g60:rgba(201,162,39,.60);
+  --pad-x:44px; --label-w:150px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{padding:36px;background:#080d15;
+     font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+     -webkit-font-smoothing:antialiased;color:var(--text-1)}
+
+.card{width:1080px;border-radius:18px;overflow:hidden;
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
+  box-shadow:0 0 0 1px rgba(227,195,107,.18), 0 22px 60px rgba(0,0,0,.6)}
+.inner{position:relative;padding:34px var(--pad-x) 26px}
+.top-gloss{position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 22%,rgba(255,255,255,0) 72%)}
+
+/* 头部 */
+.hd{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.eyebrow{font-size:13px;color:var(--text-4);letter-spacing:.22em}
+.eyebrow b{color:var(--gold-mid);font-weight:400}
+h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-spacing:.06em}
+.sub{font-size:14px;color:var(--text-3);margin-top:8px;letter-spacing:.02em}
+.stat{display:flex;gap:18px;flex:0 0 auto;padding-bottom:6px}
+.stat .s{text-align:center}
+.stat .s i{display:block;font-style:normal;font-size:11px;color:var(--text-4);letter-spacing:.16em}
+.stat .s b{display:block;font-weight:400;font-size:24px;color:var(--gold-hi);margin-top:2px;
+  font-variant-numeric:tabular-nums}
+
+/* 时间轴刻度 */
+.axis{position:relative;height:64px;margin:40px 0 10px 572px;
+  border-bottom:1px solid var(--line)}
+.axis .tk{position:absolute;top:0;height:64px;width:0}
+.axis .tk span{position:absolute;top:18px;left:5px;font-size:11.5px;color:var(--text-4);
+  white-space:nowrap;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.axis .tk.start span{color:#8FA6E8}
+.axis .tk.mnt span{color:#E0897A}
+
+.axis .tk.today span{font-size:11px;color:#fff;background:var(--today);
+  padding:2px 5px 3px;border-radius:3px}
+.sec{position:relative}
+.sl{position:absolute;top:0;bottom:0;width:2px;z-index:2;pointer-events:none}
+.sl.today{background:rgba(228,87,63,.75);box-shadow:0 0 8px rgba(228,87,63,.35)}
+.sl.start{background:rgba(120,150,235,.6)}
+.sl.mnt{background:rgba(228,87,63,.85)}
+.lane-hd b.mnt-title{color:#F0A08C}
+.lane-hd b.urgent-title{color:#F0A08C}
+
+.lane-wrap{position:relative}
+.lane-wrap .vline{position:absolute;top:0;bottom:0;width:2px;background:rgba(228,87,63,.5);z-index:3}
+
+/* 泳道（表格化：名称列 / 条块区 / 状态列） */
+.lane-body{position:relative}
+.lane-hd{display:flex;align-items:baseline;gap:10px;padding:14px 0 8px;
+  border-bottom:1px solid rgba(255,255,255,.08)}
+.lane-hd b{font-weight:400;font-size:17px;color:var(--gold-hi);letter-spacing:.12em}
+.lane-hd s{text-decoration:none;font-size:11px;color:var(--text-4);letter-spacing:.14em}
+.lane-hd .cnt{margin-left:auto;font-size:11.5px;color:var(--text-4)}
+.row{display:flex;align-items:center;height:80px;border-bottom:1px solid rgba(255,255,255,.04)}
+.row .th{flex:0 0 142px;width:142px;height:80px;border-radius:6px;overflow:hidden;
+  background:var(--slot);box-shadow:inset 0 0 0 1px rgba(255,255,255,.10)}
+.row .th img{display:block;width:142px;height:80px}
+.row .name{flex:0 0 430px;width:430px;padding:0 16px 0 14px;font-size:13.5px;color:var(--text-1);
+  line-height:1.35;display:flex;flex-direction:column;gap:4px}
+.row .name .nm{display:-webkit-box;overflow:hidden}
+.row .name .up{font-size:11.5px;color:var(--text-4);white-space:nowrap;overflow:hidden}
+.row .name .up b{color:var(--gold-mid);font-weight:400;margin-right:4px}
+.empty{padding:14px 0 6px;font-size:12.5px;color:var(--text-4)}
+.row .area{position:relative;flex:0 0 376px;width:376px;height:100%}
+.row .st{position:absolute;top:0;height:100%;line-height:80px;font-size:12.5px;
+  color:var(--text-4);font-variant-numeric:tabular-nums;letter-spacing:.02em;white-space:nowrap}
+.row .st.left{text-align:right}
+.bar .st.in{position:static;color:rgba(255,255,255,.92);font-size:12px;line-height:22px}
+.row .st.hot{color:#F09A86}
+.row .bar{top:29px;height:22px}
+.row.mnt .bar{top:11px;height:22px}
+.bar{position:absolute;border-radius:6px;overflow:hidden;
+  display:flex;align-items:center;justify-content:flex-end;padding:0 10px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
+
+/* 分类配色 */
+.c-act{background:linear-gradient(90deg,rgba(96,120,200,.55),rgba(120,96,200,.42))}
+.c-sum{background:linear-gradient(90deg,rgba(196,150,66,.55),rgba(180,110,60,.42))}
+.c-mnt{background:linear-gradient(90deg,rgba(228,87,63,.55),rgba(160,60,50,.42))}
+
+/* 今日线（贯穿泳道） */
+.vline{position:absolute;top:0;bottom:0;width:2px;background:rgba(228,87,63,.55);z-index:3}
+
+.legend{display:flex;align-items:center;gap:18px;margin-top:16px;font-size:12px;color:var(--text-4);
+  white-space:nowrap}
+.legend .i{display:flex;align-items:center;gap:6px}
+.legend .i s{width:18px;height:8px;border-radius:2px;text-decoration:none}
+.bar .n{font-size:12px;color:rgba(255,255,255,.95)}
+.legend-list{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin-top:12px}
+.legend-list .li{display:flex;align-items:baseline;gap:8px;font-size:12.5px;
+  color:var(--text-3);white-space:nowrap;overflow:hidden}
+.legend-list .li span{color:var(--gold-hi);flex:0 0 auto}
+.legend-list .li b{font-weight:400;color:var(--text-2);overflow:hidden;text-overflow:ellipsis}
+.legend-list .li s{text-decoration:none;color:var(--text-4);font-size:11.5px;flex:0 0 auto;
+  font-variant-numeric:tabular-nums}
+.foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;
+  padding-top:12px;border-top:1px solid var(--line)}
+.foot .l{font-size:11.5px;color:var(--text-4);letter-spacing:.02em}
+.foot .r{font-size:11.5px;color:var(--gold-mid);letter-spacing:.06em}
+</style></head><body>
+<div class="card"><div class="inner">
+<div class="top-gloss"></div>
+
+<div class="hd">
+  <div>
+    <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>卡 池 日 历</b></div>
+    <h1>卡池日历</h1>
+    <div class="sub">{{SUB}}</div>
+  </div>
+  <div class="stat">{{STATS}}</div>
+</div>
+
+<div class="axis">{{AXIS}}</div>
+<div class="lane-body">
+{{LANES}}
+</div>
+
+<div class="foot">
+  <div class="l">{{FOOT_L}}</div>
+</div>
+</div></div></body></html>

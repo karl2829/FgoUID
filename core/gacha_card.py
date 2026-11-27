@@ -11,7 +11,7 @@ import asyncio
 import hashlib
 import html as _html
 import json
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from . import render, store
@@ -210,6 +210,178 @@ async def get_gacha_png(rows, keyword: str = "", quality: str = "hd") -> bytes |
     try:
         path.write_bytes(png)
         for stale in path.parent.glob("gacha_*.png"):
+            if stale.name != path.name:
+                stale.unlink(missing_ok=True)
+    except Exception:
+        pass
+    return png
+
+
+# ---------------------------------------------------------------- 时间轴版（卡片 v2）
+TIMELINE_TEMPLATE = PKG / "templates" / "gacha_card.html"
+PAD_X = 44
+NAME_W = 572          # 缩略图(142) + 名称列(430)
+BARS_W = 376
+GACHA_CLS = "c-sum"
+
+
+def _d(value: str):
+    try:
+        return date.fromisoformat((value or "")[:10])
+    except Exception:
+        return None
+
+
+def _clean_name(name: str) -> str:
+    t = (name or "").replace("推荐召唤", "").strip("「」『』！· ")
+    return t or (name or "")
+
+
+def gacha_sections(rows, today=None) -> dict:
+    today = today or date.today()
+    items = []
+    for r in rows:
+        s, e = _d(r["start_time"]), _d(r["end_time"])
+        if not s or not e or e < today:
+            continue
+        items.append({
+            "name": _clean_name(r["name"]),
+            "up": (r["up_servants"] or "").strip(),
+            "start": s, "end": e,
+            "banner": _banner_name(r["banner"]) if r["banner"] else "",
+            "banner_url": r["banner"] or "",
+        })
+    ongoing = sorted([i for i in items if i["start"] <= today], key=lambda i: i["end"])
+    upcoming = sorted([i for i in items if i["start"] > today], key=lambda i: i["start"])
+    if not items:
+        return {}
+    lo = today
+    hi = max(i["end"] for i in items)
+    hi = max(min(hi, today + timedelta(days=45)), today + timedelta(days=10))
+    # 超出窗口的（45 天以后才开始）先不放进图里，免得条块顶到卡片外
+    items = [i for i in items if i["start"] <= hi]
+    if not items:
+        return {}
+    ongoing = [i for i in ongoing if i["start"] <= hi]
+    upcoming = [i for i in upcoming if i["start"] <= hi]
+    for i in items:                                  # 结束日也不超过窗口
+        i["end"] = min(i["end"], hi)
+    return {"ongoing": ongoing, "upcoming": upcoming, "lo": lo, "hi": hi,
+            "span": max((hi - lo).days, 1), "today": today}
+
+
+def _pct(d, m) -> float:
+    return (d - m["lo"]).days / m["span"] * 100
+
+
+def _row(it, m, kind_cls) -> str:
+    today = m["today"]
+    left = min(max(_pct(max(it["start"], m["lo"]), m), 0.0), 99.4)
+    width = min(max(_pct(it["end"], m) - left, 0.6), 100.0 - left)
+    if it["start"] > today:
+        status = f'{it["start"].month:02d}-{it["start"].day:02d} 开始'
+        hot = ""
+    else:
+        left_days = (it["end"] - today).days
+        status = f'剩 {left_days} 天 · 截止 {it["end"].month:02d}-{it["end"].day:02d}'
+        hot = " hot" if left_days <= 2 else ""
+    thumb = (f'<div class="th"><img src="../assets/{it["banner"]}"></div>'
+             if it["banner"] else '<div class="th"></div>')
+    up = (f'<div class="up"><b>UP</b>{_html.escape(_short(it["up"], 46))}</div>'
+          if it["up"] else '<div class="up">&nbsp;</div>')
+    end_pct = left + width
+    if width >= 34 and end_pct <= 88:            # 够宽且不出界：写在块内
+        bar = (f'<div class="bar {kind_cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
+               f'<span class="st in{hot}">{status}</span></div>')
+        st = ""
+    elif end_pct <= 58:                          # 靠左：跟在块尾
+        bar = f'<div class="bar {kind_cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+        st = f'<div class="st{hot}" style="left:{end_pct + 2.0:.3f}%">{status}</div>'
+    else:                                        # 靠右：放块左侧
+        bar = f'<div class="bar {kind_cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+        st = (f'<div class="st left{hot}" style="right:{max(100 - left + 2.0, 2.0):.3f}%">'
+              f'{status}</div>')
+    return (f'<div class="row">{thumb}<div class="name">'
+            f'<div class="nm">{_html.escape(it["name"])}</div>{up}</div>'
+            f'<div class="area">{bar}{st}</div></div>')
+
+
+def _short(text: str, n: int) -> str:
+    text = (text or "").replace("\n", " ").strip()
+    return text if len(text) <= n else text[:n].rstrip() + "…"
+
+
+def gacha_timeline_html(sections: dict, keyword: str = "") -> str:
+    m = sections
+    rows = m["ongoing"] + m["upcoming"]
+    parts = []
+    for title, en, items in (("进行中", "O N G O I N G", m["ongoing"]),
+                             ("即将开始", "U P C O M I N G", m["upcoming"])):
+        if not items:
+            continue
+        body = "".join(_row(it, m, GACHA_CLS) for it in items)
+        parts.append(f'<div class="sec"><div class="lane-hd"><b>{title}</b><s>{en}</s>'
+                     f'<span class="cnt">{len(items)}</span></div>{body}</div>')
+
+    marks = [(m["today"], "today", f'{m["today"].month}-{m["today"].day:02d} 今天')]
+    if m["upcoming"]:
+        d = m["upcoming"][0]["start"]
+        marks.append((d, "start", f'{d.month}-{d.day:02d} 新卡池'))
+    axis = "".join(
+        f'<div class="tk {cls}" style="left:{max(_pct(d, m), 0.2):.3f}%">'
+        f'<span style="top:{2 if cls == "today" else 24}px;left:5px">{label}</span></div>'
+        for d, cls, label in marks)
+
+    sub = (f'{m["lo"].year}.{m["lo"].month:02d}.{m["lo"].day:02d} — '
+           f'{m["hi"].year}.{m["hi"].month:02d}.{m["hi"].day:02d}　·　'
+           + (f'搜索「{keyword}」　·　' if keyword else "") + "官网公告同步（当前 + 未来）")
+    stats = (f'<div class="s"><i>进行中</i><b>{len(m["ongoing"])}</b></div>'
+             f'<div class="s"><i>即将开始</i><b>{len(m["upcoming"])}</b></div>')
+
+    html = TIMELINE_TEMPLATE.read_text(encoding="utf-8")
+    for key, val in {
+        "SUB": sub,
+        "STATS": stats,
+        "AXIS": axis,
+        "LANES": "".join(parts),
+        "FOOT_L": f'共 {len(rows)} 期　·　数据来源 fgo-wiki 快照',
+    }.items():
+        html = html.replace("{{%s}}" % key, val)
+    left = [x for x in html.split("{{") if "}}" in x and x.split("}}")[0].isupper()]
+    if left:
+        raise ValueError(f"模板还有未填充占位符：{left[:3]}")
+    return html
+
+
+async def get_gacha_timeline_png(rows, keyword: str = "", quality: str = "std") -> bytes | None:
+    sections = gacha_sections(rows)
+    if not sections or not (sections["ongoing"] or sections["upcoming"]):
+        return None
+    if not render.available():
+        return None
+    html = gacha_timeline_html(sections, keyword)
+    key = hashlib.sha1((html + quality).encode("utf-8")).hexdigest()[:12]
+    d = store.data_dir() / "cards"
+    d.mkdir(parents=True, exist_ok=True)
+    path = d / f"gcal_{key}.img"
+    if path.is_file():
+        return path.read_bytes()
+
+    from ..card import fetch as card_fetch
+
+    mapping = {it["banner"]: it["banner_url"] for it in sections["ongoing"] + sections["upcoming"]
+               if it["banner"]}
+    images = await asyncio.to_thread(card_fetch.remote_images, mapping) if mapping else None
+    got = {k[len("../assets/"):] for k in (images or {}) if k.startswith("../assets/")}
+    for it in sections["ongoing"] + sections["upcoming"]:
+        if it["banner"] and it["banner"] not in got:
+            it["banner"] = ""
+    html = gacha_timeline_html(sections, keyword) if mapping else html
+    png = await render.render_png(html, TIMELINE_TEMPLATE.parent, quality=quality,
+                                  extra_images=images, bleed=28, margin=8)
+    try:
+        path.write_bytes(png)
+        for stale in d.glob("gcal_*.img"):
             if stale.name != path.name:
                 stale.unlink(missing_ok=True)
     except Exception:

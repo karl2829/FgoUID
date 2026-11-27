@@ -277,7 +277,10 @@ async def fgo_gacha(bot: Bot, ev: Event):
         return await bot.send(format_gacha(rows))
     try:
         # 首屏要下横幅（~150KB/张），给个上限，超时先发文字，缓存会留给下一次
-        png = await asyncio.wait_for(get_gacha_png(rows, kw, quality_of(ev)), timeout=25)
+        from .core.gacha_card import get_gacha_timeline_png
+
+        png = await asyncio.wait_for(
+            get_gacha_timeline_png(rows, kw, quality_of(ev)), timeout=25)
     except asyncio.TimeoutError:
         logger.info("[FGOUID] 卡池卡首次渲染超时，先发文字版")
         return await bot.send(format_gacha(rows) + "\n（卡池卡首次生成要下图，稍后再发一次就有图了）")
