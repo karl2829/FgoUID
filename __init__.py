@@ -1,6 +1,7 @@
 """FGOUID — FGO 查询插件（GsCore 指令版）"""
 
 import asyncio
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from gsuid_core.bot import Bot
@@ -10,6 +11,7 @@ from gsuid_core.segment import MessageSegment
 from gsuid_core.sv import SV, Plugins
 
 from .core import aliases as alias_store
+from .core import news as news_mod
 from .core import search as searcher
 from .core.card import render_cards
 from .core.ce_card import get_ce_png, load_details_for
@@ -30,6 +32,7 @@ from .core.settings import (
     quality_of,
     scope_of,
     skill_of,
+    notice_of,
 )
 
 
@@ -454,6 +457,7 @@ try:
     @on_core_start(priority=30)
     async def _fgouid_core_start() -> None:
         asyncio.create_task(_startup_prewarm())
+        asyncio.create_task(_notice_loop())
 except Exception as e:  # 老版本 core 没有这个钩子就跳过
     logger.debug(f"[FGOUID] on_core_start 不可用：{e}")
 
@@ -604,3 +608,124 @@ async def fgo_alias(bot: Bot, ev: Event):
         "· fgo别名 删除 <你的叫法>\n"
         "· fgo别名 — 看当前有哪些别名"
     )
+
+
+# ---------------------------------------------------------------- 官网公告 / 日历
+NOTICE_TASK = "FGO维护公告"
+NOTICE_HOURS = range(8, 23)          # 白天 8-23 点之间每小时扫一次
+
+
+async def _notice_push_once() -> int:
+    """扫一次官网：入库 + 推未发过的维护公告。返回推送条数。"""
+    try:
+        from gsuid_core.subscribe import gs_subscribe
+    except Exception as e:
+        logger.warning(f"[FGOUID] 公告订阅不可用：{e}")
+        return 0
+
+    subs = await gs_subscribe.get_subscribe(NOTICE_TASK)
+    if not subs:
+        return 0
+
+    res = await asyncio.to_thread(news_mod.sync, 3)
+    pending = news_mod.pending_maintenance()
+    if not pending:
+        return 0
+
+    sent = 0
+    for item in pending:
+        when = item.get("start_at") or (item.get("ctime") or "")[:10]
+        text = (f"【FGO 维护公告】\n{item['title']}\n发布：{item.get('ctime', '')[:16]}"
+                + (f"\n维护日：{when}" if when else "")
+                + (f"\n\n{item['summary'][:280]}" if item.get("summary") else "")
+                + "\n\n官网：https://game.bilibili.com/fgo/news.html")
+        for sub in subs:
+            try:
+                await sub.send(text)
+                sent += 1
+            except Exception as e:
+                logger.warning(f"[FGOUID] 公告推送失败：{e}")
+    news_mod.mark_pushed([i["id"] for i in pending])
+    logger.info(f"[FGOUID] 维护公告已推送 {len(pending)} 条 → {len(subs)} 个订阅")
+    return sent
+
+
+async def _notice_loop() -> None:
+    """每小时检查；白天窗口内才真正抓取。"""
+    while True:
+        try:
+            now = datetime.now()
+            if now.hour in NOTICE_HOURS:
+                await _notice_push_once()
+            # 睡到下一个整点
+            nxt = (now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1))
+            await asyncio.sleep(max(60, (nxt - datetime.now()).total_seconds()))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            logger.warning(f"[FGOUID] 公告循环异常：{e}")
+            await asyncio.sleep(600)
+
+
+def _fmt_span(item: dict) -> str:
+    start = item.get("start_at") or ""
+    end = item.get("end_at") or ""
+    if start and end:
+        return f"{start[5:]} ~ {end[5:]}"
+    if start:
+        return f"{start[5:]} 起"
+    return "时间待定"
+
+
+def calendar_text(limit: int = 12) -> str:
+    items = [i for i in news_mod.calendar(limit) if i.get("start_at")]
+    if not items:
+        return "日历还是空的：还没有抓到带时间的活动公告（官网公告每小时同步一次）"
+    today = date.today().isoformat()
+    lines = [f"【FGO 日历】进行中 / 即将开始（{len(items)} 项）"]
+    for it in items:
+        tag = "进行中" if (it["start_at"] <= today and (not it["end_at"] or it["end_at"] >= today)) else "即将"
+        if it["start_at"] > today:
+            tag = "即将"
+        title = re.sub(r"[「」『』【】]", "", it["title"]).strip("！! ").strip()
+        lines.append(f"· {_fmt_span(it)} ｜{tag}｜ {title[:38]}")
+    extra = news_mod.dateless_count()
+    if extra:
+        lines.append(f"（另有 {extra} 条活动公告没标注时间，未列入）")
+    lines.append("数据来自 FGO 官网公告，过期条目自动清理")
+    return "\n".join(lines)
+
+
+@sv.on_fullmatch(("fgo日历", "fgo活动日历"), block=True)
+async def fgo_calendar(bot: Bot, ev: Event):
+    try:
+        if not news_mod.calendar(1):                  # 库空就先抓一次
+            await asyncio.to_thread(news_mod.sync, 3)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 日历首次抓取失败：{e}")
+    await bot.send(calendar_text())
+
+
+@sv.on_command("fgo设置公告", block=True)
+async def fgo_set_notice(bot: Bot, ev: Event):
+    arg = (ev.text or "").strip()
+    sub_type = "session" if getattr(ev, "user_type", "") == "group" else "single"
+    if arg in ("开", "开启", "on", "1"):
+        put(scope_of(ev), "notice", True)
+        try:
+            from gsuid_core.subscribe import gs_subscribe
+
+            await gs_subscribe.add_subscribe(sub_type, NOTICE_TASK, ev)
+        except Exception as e:
+            logger.warning(f"[FGOUID] 订阅写入失败：{e}")
+        return await bot.send("已订阅官网维护公告 ✅\n8-23 点每小时扫一次，只推维护，其他人发的活动公告不进推送")
+    if arg in ("关", "关闭", "off", "0"):
+        put(scope_of(ev), "notice", False)
+        try:
+            from gsuid_core.subscribe import gs_subscribe
+
+            await gs_subscribe.delete_subscribe(sub_type, NOTICE_TASK, ev)
+        except Exception as e:
+            logger.warning(f"[FGOUID] 订阅删除失败：{e}")
+        return await bot.send("已关闭维护公告推送 ✅")
+    return await bot.send("用法：fgo设置公告 开 / 关")
