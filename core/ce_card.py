@@ -93,6 +93,7 @@ def ce_model(ce: dict, detail: dict | None, lang: str = "zh") -> dict:
         "type": CE_TYPE_LABEL.get(ce.get("ce_type") or "", ce.get("ce_type") or ""),
         "collection_no": detail.get("collection_no") or 0,
         "acquisition": detail.get("acquisition") or "",
+        "lore": (detail.get("lore") or "").strip(),
         "lv_max": detail.get("lv_max") or 0,
         "atk": [detail.get("atk_base") or 0, detail.get("atk_max") or 0],
         "hp": [detail.get("hp_base") or 0, detail.get("hp_max") or 0],
@@ -113,15 +114,10 @@ def ce_html(model: dict) -> str:
     chips = []
     if model["rarity"]:
         chips.append(f'<span class="chip">{_stars(model["rarity"])}</span>')
-    if model["type"]:
-        chips.append(f'<span class="chip dim">{esc(model["type"])}</span>')
     if model["cost"]:
         chips.append(f'<span class="chip dim">COST {esc(str(model["cost"]))}</span>')
     if model["collection_no"]:
         chips.append(f'<span class="chip dim">No.{int(model["collection_no"]):03d}</span>')
-    acq = model.get("acquisition") or ""
-    if acq:
-        chips.append(f'<span class="chip">{esc(acq)}</span>')
     if model["region"] and model["region"] != "CN":
         chips.append(f'<span class="chip dim">{esc(model["region"])}</span>')
 
@@ -139,33 +135,36 @@ def ce_html(model: dict) -> str:
         for e in model["effects"]:
             label = "满破效果" if e.get("priority") == 2 else "未破效果"
             effs.append(
-                f'<div class="ef"><div class="lb"><s></s>{label}</div>'
+                f'<div class="ef"><div class="lb"><s></s><b>{label}</b></div>'
                 f'<div class="tx">{esc(e.get("detail") or "")}</div></div>'
             )
     elif model["fallback_effect"]:
         effs.append(
-            f'<div class="ef"><div class="lb"><s></s>效果</div>'
+            f'<div class="ef"><div class="lb"><s></s><b>效果</b></div>'
             f'<div class="tx">{esc(model["fallback_effect"])}</div></div>'
         )
 
-    sub = "　·　".join(x for x in (model["type"], f"图鉴 No.{int(model['collection_no']):03d}" if model["collection_no"] else "") if x)
+    sub = "　·　".join(x for x in (
+        f"图鉴 No.{int(model['collection_no']):03d}" if model["collection_no"] else "",
+        model["region"] if model["region"] and model["region"] != "CN" else "",
+    ) if x)
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "EYEBROW_LEFT": EYEBROW_LEFT,
         "EYEBROW_RIGHT": EYEBROW_RIGHT,
-        "TITLE": TITLE,
+        "TITLE": esc(model["name"]),
         "SUB": sub or "离线快照",
-        "PILL": model["region"] or "FGO",
+        "PILL": esc(model["acquisition"] or (model["region"] or "FGO")),
         "NAME": esc(model["name"]),
         "NAME_JP": esc(model["name_jp"]) if model["name_jp"] and model["name_jp"] != model["name"] else "",
         "CHIPS": "".join(chips),
         "NUMS": "".join(nums),
         "EFFS": "".join(effs),
+        "LORE": esc(model["lore"]) if model["lore"] else "—",
         "ART": model["art"],
         "FOOT_L1": FOOTER["l1"],
         "FOOT_L2": FOOTER["l2"],
-        "FOOT_R1": FOOTER["r1"],
-        "FOOT_R2": FOOTER["r2"],
+
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]

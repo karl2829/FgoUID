@@ -75,6 +75,20 @@ def _effects(raw: dict) -> list[dict]:
     return out
 
 
+def _lore_of(wiki: Path, region: str, ce_id: str) -> str:
+    """礼装「解说」只在 MD 里（raw 没有），压成一段。"""
+    md = wiki / "entities" / "craft-essences" / region / f"{ce_id}.md"
+    if not md.is_file():
+        return ""
+    text = md.read_text(encoding="utf-8")
+    m = re.search(r"^##+\s*解说\s*$([\s\S]*?)(?=^##+\s|\Z)", text, re.M)
+    if not m:
+        return ""
+    body = m.group(1)
+    lines = [ln.lstrip("> ").strip() for ln in body.splitlines()]
+    return " ".join(x for x in lines if x)
+
+
 def _acq_map(wiki: Path) -> dict:
     """Mooncell 礼装获取途径快照：图鉴编号 → type（期间限定/卡池常驻/牵绊…）。"""
     p = wiki / "raw" / "acquisition" / "ces.json"
@@ -90,6 +104,8 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
     cols = {r[1] for r in con.execute("PRAGMA table_info(ce_details)")}
     if "acquisition" not in cols:                       # 老库补列
         con.execute("ALTER TABLE ce_details ADD COLUMN acquisition TEXT")
+    if "lore" not in cols:
+        con.execute("ALTER TABLE ce_details ADD COLUMN lore TEXT")
     acq = _acq_map(wiki)
     total = kept = 0
     for region in regions:
@@ -108,8 +124,8 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
                 continue
             con.execute(
                 "INSERT OR REPLACE INTO ce_details (id, region, collection_no, name_jp,"
-                " art_url, icon_url, atk_base, atk_max, hp_base, hp_max, lv_max, effects, acquisition)"
-                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " art_url, icon_url, atk_base, atk_max, hp_base, hp_max, lv_max, effects, acquisition,"
+                " lore) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     str(raw.get("id") or f.stem), region,
                     raw.get("collectionNo"), raw.get("originalName") or "",
@@ -119,6 +135,7 @@ def sync(wiki: Path, con: sqlite3.Connection, regions: list[str]) -> dict:
                     int(raw.get("lvMax") or 0),
                     json.dumps(effects, ensure_ascii=False),
                     acq.get(str(raw.get("collectionNo") or ""), ""),
+                    _lore_of(wiki, region, str(raw.get("id") or f.stem)),
                 ),
             )
             kept += 1
