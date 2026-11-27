@@ -305,12 +305,17 @@ def sync(pages: int = 3, details: int = 25) -> dict:
             if not row["id"] or not row["title"]:
                 continue
             exists = con.execute("SELECT 1 FROM news WHERE id = ?", (row["id"],)).fetchone()
+            # 注意：不能用 INSERT OR REPLACE —— 那会把 detail_*/comp/contents 一起重置
             con.execute(
-                "INSERT OR REPLACE INTO news (id, title, kind, ctime, start_at, end_at,"
-                " summary, pushed, fetched_at) VALUES (?,?,?,?,?,?,?,"
-                " COALESCE((SELECT pushed FROM news WHERE id=?),0), ?)",
+                "INSERT INTO news (id, title, kind, ctime, start_at, end_at, summary,"
+                " pushed, fetched_at) VALUES (?,?,?,?,?,?,?,0,?)"
+                " ON CONFLICT(id) DO UPDATE SET title=excluded.title, kind=excluded.kind,"
+                " ctime=excluded.ctime, summary=excluded.summary, fetched_at=excluded.fetched_at,"
+                " start_at=CASE WHEN excluded.start_at != '' THEN excluded.start_at"
+                "               ELSE news.start_at END,"
+                " end_at=CASE WHEN excluded.end_at != '' THEN excluded.end_at ELSE news.end_at END",
                 (row["id"], row["title"], row["kind"], row["ctime"], row["start_at"],
-                 row["end_at"], row["summary"], row["id"], now),
+                 row["end_at"], row["summary"], now),
             )
             if not exists:
                 new_rows.append(row)
