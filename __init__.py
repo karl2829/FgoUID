@@ -689,6 +689,7 @@ def calendar_text(limit: int = 12) -> str:
         if it["start_at"] > today:
             tag = "即将"
         title = re.sub(r"[「」『』【】]", "", it["title"]).strip("！! ").strip()
+        title = re.sub(r"^(限时|预告|公告)", "", title).strip()
         lines.append(f"· {_fmt_span(it)} ｜{tag}｜ {title[:38]}")
     extra = news_mod.dateless_count()
     if extra:

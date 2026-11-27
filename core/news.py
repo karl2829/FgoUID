@@ -201,12 +201,15 @@ def cleanup(con: sqlite3.Connection | None = None) -> int:
             con.close()
 
 
-def pending_maintenance() -> list[dict]:
-    """还没推送过的维护公告。"""
+def pending_maintenance(within_days: int = 3) -> list[dict]:
+    """还没推送过的维护公告（只取最近几天，避免刚订阅时把历史全推一遍）。"""
+    cutoff = (date.today() - timedelta(days=within_days)).isoformat()
     con = _conn()
     try:
         rows = con.execute(
-            "SELECT * FROM news WHERE kind = '维护' AND pushed = 0 ORDER BY ctime DESC LIMIT 5"
+            "SELECT * FROM news WHERE kind = '维护' AND pushed = 0"
+            " AND substr(ctime,1,10) >= ? ORDER BY ctime DESC LIMIT 5",
+            (cutoff,),
         ).fetchall()
         return [dict(r) for r in rows]
     finally:
