@@ -167,9 +167,8 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -
             inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:0.5%"></div>'
                      f'<div class="lab" style="left:{left + 0.9:.3f}%;font-size:{size:.1f}px">'
                      f'<b>{_html.escape(text)}</b></div>')
-        elif bar_px >= 250:                           # 宽：起止日期写在条块两端，标题居中
-            span_txt = f'{d1} → {d2}'
-            pad = 88                                      # 两端日期占位
+        elif bar_px >= 250 and _fit_font(title, bar_px - 110) >= 12:
+            pad = 55                                      # 两端日期占位（各 ~40px）
             size = _fit_font(title, bar_px - pad * 2)
             inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
                      f'<span class="ds">{d1}</span>'
