@@ -111,63 +111,52 @@ def _maint_items(rows: list[dict]) -> list[dict]:
     return sorted(seen.values(), key=lambda r: r["_s"])
 
 
-NUM_MARKS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
-
-
-def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict,
-          legend: list | None = None) -> str:
+def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -> str:
+    """每条活动独占一行：条块按日期定位，标题永远跟着条块，右侧固定列放日期。"""
     if kind == "维护":
         items = _maint_items(rows)
-        lanes = [[it] for it in items]          # 每个维护日一行，避免标签打架
     else:
         items = sorted([r for r in rows if r.get("kind") == kind], key=lambda r: (r["_s"], r["_e"]))
-        lanes = []
-        for it in items:
-            for lane in lanes:
-                if lane[-1]["_e"] < it["_s"]:
-                    lane.append(it)
-                    break
-            else:
-                lanes.append([it])
     if not items:
         return ""
+
     body = []
-    for lane in lanes:
-        bars = []
-        for idx, it in enumerate(lane):
-            nxt = _pct(lane[idx + 1]["_s"], m) if idx + 1 < len(lane) else 100.0
-            s_clamped = max(it["_s"], m["lo"])
-            left = _pct(s_clamped, m)
-            width = max(_pct(it["_e"], m) - left, 0.7)
-            title = _clean(it.get("title", ""))
-            chars = 34 if width >= 40 else (26 if width >= 30 else (18 if width >= 22 else 12))
-            short = _short(title, chars)
-            budget = nxt - (left + width)          # 右侧还剩多少空间放标签
-            span_txt = (f'{it["_s"].month}-{it["_s"].day:02d}'
-                        + (f'~{it["_e"].month}-{it["_e"].day:02d}' if it["_e"] != it["_s"] else ""))
-            if kind == "维护":                       # 维护是单日事件：画标记，标签放右侧
-                bars.append(
-                    f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
-                    f'<div class="lab" style="left:{min(left + width + 0.6, 78):.3f}%">'
-                    f'<b>{it["_s"].month}-{it["_s"].day:02d}'
-                    f'{" " + it["_hour"] if it.get("_hour") else ""} 维护</b></div>')
-                continue
-            if width >= 20:                          # 够宽：标题写进条块
-                bars.append(
-                    f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
-                    f'<span class="t">{_html.escape(short)}</span>'
-                    f'<span class="d">{span_txt}</span></div>')
-            else:                                    # 太窄：编号 + 底部图例
-                idx = len(legend) if legend is not None else 0
-                mark = NUM_MARKS[idx] if idx < len(NUM_MARKS) else "·"
-                if legend is not None:
-                    legend.append((mark, title, span_txt))
-                bars.append(
-                    f'<div class="bar {cls}" style="left:{left:.3f}%;width:{max(width, 4.2):.3f}%;'
-                    f'justify-content:center;padding:0">'
-                    f'<span class="n">{mark}</span></div>')
-        cls_row = "row mnt" if kind == "维护" else "row"
-        body.append(f'<div class="{cls_row}">' + "".join(bars) + "</div>")
+    for it in items:
+        s_clamped = max(it["_s"], m["lo"])
+        left = _pct(s_clamped, m)
+        width = max(_pct(it["_e"], m) - left, 0.6)
+        title = _clean(it.get("title", ""))
+        span_txt = (f'{it["_s"].month}-{it["_s"].day:02d}'
+                    + (f'~{it["_e"].month}-{it["_e"].day:02d}' if it["_e"] != it["_s"] else ""))
+
+        if kind == "维护":
+            hour = f' {it["_hour"]}' if it.get("_hour") else ""
+            bar = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+                   f'<div class="lab" style="left:{min(left + width + 0.8, 86):.3f}%">'
+                   f'<b>{span_txt}{hour} 维护</b></div>')
+            body.append(f'<div class="row mnt"><div class="area">{bar}</div>'
+                        f'<div class="dates">{span_txt}</div></div>')
+            continue
+
+        if width >= 24:
+            chars = 40 if width >= 34 else 30
+        else:
+            chars = 30            # 放条块外面，空间基本自由，给足字数
+        short = _short(title, chars)
+        if width >= 24:                              # 够宽：标题+日期都写进条块
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%">'
+                     f'<span class="t">{_html.escape(short)}</span></div>')
+        elif left < 62:                              # 窄块靠左：标题放条块右边
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+                     f'<div class="lab" style="left:{left + width + 0.8:.3f}%">'
+                     f'<b>{_html.escape(short)}</b></div>')
+        else:                                        # 窄块靠右：标题放条块左边
+            inner = (f'<div class="bar {cls}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+                     f'<div class="lab" style="right:{100 - left + 0.8:.3f}%;'
+                     f'justify-content:flex-end"><b>{_html.escape(short)}</b></div>')
+        body.append(f'<div class="row"><div class="area">{inner}</div>'
+                    f'<div class="dates">{span_txt}</div></div>')
+
     return (f'<div class="lane"><div class="tag"><b>{label}</b><i>{en}</i></div>'
             f'<div class="rows">{"".join(body)}</div></div>')
 
@@ -177,8 +166,7 @@ def calendar_html(items: list[dict]) -> str:
     if not m:
         raise ValueError("没有可上时间轴的数据")
     rows = m["rows"]
-    legend_rows: list[tuple] = []
-    lanes = "".join(_lane(k, label, en, cls, rows, m, legend_rows) for k, label, en, cls in KINDS)
+    lanes = "".join(_lane(k, label, en, cls, rows, m) for k, label, en, cls in KINDS)
     stats = []
     for k, label, _en, _cls in KINDS:
         n = sum(1 for r in rows if r.get("kind") == k)
@@ -192,13 +180,6 @@ def calendar_html(items: list[dict]) -> str:
               '<div class="i"><s class="c-sum"></s>召唤</div>'
               '<div class="i"><s class="c-mnt"></s>维护</div>'
               f'<div class="i" style="margin-left:auto"><s style="background:#E4573F"></s>今天</div>')
-    legend_html = ""
-    if legend_rows:
-        cells = "".join(
-            f'<div class="li"><span>{mark}</span><b>{_html.escape(_short(t, 30))}</b><s>{sp}</s></div>'
-            for mark, t, sp in legend_rows
-        )
-        legend_html = f'<div class="legend-list">{cells}</div>'
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "SUB": sub,
@@ -206,7 +187,7 @@ def calendar_html(items: list[dict]) -> str:
         "AXIS": _axis(m),
         "LANES": (lanes + f'<div class="vline" style="left:{BARS_X + BARS_W * left / 100:.1f}px"></div>'),
         "LEGEND_COLOR": legend,
-        "LEGEND_LIST": legend_html,
+
         "FOOT_L": f'共 {len(rows)} 项　·　数据来源 FGO 官网公告（B 站）',
     }.items():
         html = html.replace("{{%s}}" % key, val)

@@ -55,17 +55,22 @@ h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-sp
 .lane .tag b{font-weight:400;font-size:16px;color:var(--gold-hi);letter-spacing:.10em}
 .lane .tag i{font-style:normal;font-size:11px;color:var(--text-4);letter-spacing:.04em}
 .lane .rows{position:relative;flex:1 1 auto;min-width:0;padding:8px 0}
-.row{position:relative;height:38px;margin:5px 0}
-.row.mnt{height:26px;margin:4px 0}
-.row.mnt .bar{height:26px;top:0}
-.row.mnt .lab{height:26px;line-height:26px}
-.bar{position:absolute;top:0;height:38px;border-radius:6px;overflow:hidden;
+.row{display:flex;align-items:center;height:42px}
+.row.mnt{height:30px}
+.row .area{position:relative;flex:1 1 auto;min-width:0;height:100%}
+.row .dates{flex:0 0 128px;text-align:right;font-size:12.5px;color:var(--text-4);
+  font-variant-numeric:tabular-nums;letter-spacing:.02em;padding-left:10px}
+.row .bar{top:6px;height:30px}
+.row.mnt .bar{top:2px;height:26px}
+.row .lab{top:0;height:100%;line-height:42px}
+.row.mnt .lab{height:30px;line-height:30px}
+.bar{position:absolute;border-radius:6px;overflow:hidden;
   display:flex;align-items:center;padding:0 12px;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)}
 .bar .t{font-size:14.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar .d{font-size:11px;color:rgba(255,255,255,.82);white-space:nowrap;margin-left:10px;
   font-variant-numeric:tabular-nums}
-.lab{position:absolute;top:0;height:38px;display:block;line-height:38px;padding-left:8px;
+.lab{position:absolute;display:block;padding-left:8px;
   font-size:13.5px;color:var(--text-2);white-space:nowrap;overflow:hidden}
 .lab b{font-weight:400;color:var(--text-1);margin-right:8px}
 .lab s{text-decoration:none;font-size:11.5px;color:var(--text-4);font-variant-numeric:tabular-nums}
@@ -113,7 +118,6 @@ h1{font-size:40px;line-height:1.16;color:var(--text-1);margin-top:10px;letter-sp
 </div>
 
 <div class="legend">{{LEGEND_COLOR}}</div>
-{{LEGEND_LIST}}
 <div class="foot">
   <div class="l">{{FOOT_L}}</div>
 </div>
