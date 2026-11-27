@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS news(
     comp       TEXT NOT NULL DEFAULT '',   -- 补偿内容
     comp_time  TEXT NOT NULL DEFAULT '',   -- 发放时间
     intro      TEXT NOT NULL DEFAULT '',   -- 正文开场白（详情页第一个【小标题】之前）
+    end_guess  INTEGER NOT NULL DEFAULT 0, -- 结束时间是否由正文「N天内」推断
     contents   TEXT NOT NULL DEFAULT '',   -- 维护内容（JSON 数组）
     comp_to    TEXT NOT NULL DEFAULT ''    -- 补偿对象
 );
@@ -65,7 +66,7 @@ def _conn() -> sqlite3.Connection:
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
     for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time",
-                "contents", "comp_to", "intro"):
+                "contents", "comp_to", "intro", "end_guess"):
         if col not in cols:
             con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
     con.commit()
@@ -240,6 +241,27 @@ def _first_line(value: str, cut_words: tuple[str, ...] = ()) -> str:
     return ""
 
 
+GUESS_SPAN = re.compile(r"(\d{1,3})\s*天[内後后]")
+
+
+def guess_end(start: str, text: str) -> str:
+    """没有明确结束时间时，用正文里的「N天内 / 为期N天」推一个结束日。"""
+    m = GUESS_SPAN.search(text or "")
+    if not m:
+        return ""
+    try:
+        days = int(m.group(1))
+    except ValueError:
+        return ""
+    if not (1 <= days <= 180):
+        return ""
+    try:
+        d0 = datetime.strptime(start[:10], "%Y-%m-%d").date()
+    except Exception:
+        return ""
+    return (d0 + timedelta(days=days)).isoformat()
+
+
 def _parse_items(value: str) -> list[str]:
     """把「1. 开启xxx 2. 关闭xxx」拆成列表。"""
     text = (value or "").replace("\r", "\n")
@@ -299,7 +321,8 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
     done = 0
     try:
         rows = con.execute(
-            "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND (contents = '' OR intro = '')))"
+            "SELECT * FROM news WHERE (detail_at = '' OR (kind = '维护' AND (contents = '' OR intro = ''))"
+            " OR (end_at = '' AND kind IN ('活动','召唤','维护')))"
             " AND substr(ctime,1,10) >= ? ORDER BY ctime DESC LIMIT ?",
             (cutoff, max(1, budget)),
         ).fetchall()
@@ -311,6 +334,7 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             intro = re.sub(r"\s*\n\s*", " ", head or "").strip()[:400]
             start, end = r["start_at"], r["end_at"]
             mstart = mend = comp = ctime_s = comp_to = ""
+            end_guess = 0
             items_json = ""
             if r["kind"] == "维护":
                 mt = sec.get("维护时间") or sec.get("维护期间") or ""
@@ -331,6 +355,11 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                 sched = pick_main_range(parse_schedule(plain))
                 if sched:
                     start, end = sched["start"], sched["end"]
+                if start and not end:                # 「维护后~」这类开放结束：按 N 天推
+                    g = guess_end(start, plain)
+                    if g:
+                        end = g
+                        end_guess = 1
                 if not items_json:                       # 活动/召唤：抓正文里的要点行
                     bullets = [ln.strip(" 　·・■◆-") for ln in plain.splitlines()
                                if ln.strip().startswith(("■", "◆", "・"))]
@@ -339,10 +368,11 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
                         items_json = json.dumps(bullets, ensure_ascii=False)
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
-                " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=? WHERE id=?",
+                " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=?,"
+                " end_guess=? WHERE id=?",
                 (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
                  mstart, mend, comp.replace("\n", " ")[:120], ctime_s, items_json, comp_to,
-                 intro, r["id"]),
+                 intro, end_guess, r["id"]),
             )
             done += 1
             time.sleep(1.2)                      # 别把人家接口打疼

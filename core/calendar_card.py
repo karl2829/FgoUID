@@ -19,7 +19,7 @@ TEMPLATE = PKG / "templates" / "calendar_card.html"
 
 KINDS = (
     ("活动", "活　动", "E V E N T S", "c-act"),
-    ("召唤", "召　唤", "S U M M O N S", "c-sum"),
+    ("召唤", "卡　池", "C A R D　P O O L", "c-sum"),
     ("维护", "维　护", "M A I N T.", "c-mnt"),
 )
 PAD_X = 44             # 模板 .inner 的左右 padding
@@ -94,23 +94,48 @@ def _pct(d: date, m: dict) -> float:
     return (d - m["lo"]).days / m["span"] * 100
 
 
+def _bounds(m: dict) -> list:
+    """时间轴刻度 = 所有开始/结束日 + 今天，去重排序。"""
+    pts = {m["today"]}
+    for r in m["rows"]:
+        pts.add(r["_s"])
+        pts.add(r["_e"])
+    pts = sorted(p for p in pts if m["lo"] <= p <= m["hi"])
+    return pts or [m["lo"], m["hi"]]
+
+
 def _axis(m: dict) -> str:
-    lo, hi = m["lo"], m["hi"]
+    pts = _bounds(m)
     out = []
-    cur = lo
-    step = 7 if (hi - lo).days <= 70 else 14
-    while cur <= hi:
-        left = _pct(cur, m)
-        if 0 <= left <= 100 and left > 12:
-            out.append(f'<div class="tk" style="left:{left:.3f}%">'
-                       f'<span>{cur.month}-{cur.day:02d}</span></div>')
-        cur += timedelta(days=step)
-    left = _pct(m["today"], m)
-    if left < 12:                     # 窗口从今天开始：徽标挂右边，别被卡片裁掉
-        badge = f'<span style="left:14px">今天 {m["today"].month}-{m["today"].day:02d}</span>'
-    else:
-        badge = f'<span>今天 {m["today"].month}-{m["today"].day:02d}</span>'
-    out.append(f'<div class="today" style="left:{left:.3f}%">{badge}</div>')
+    prev = None
+    for d in pts:
+        left = _pct(d, m)
+        is_today = d == m["today"]
+        label = f'{d.month}-{d.day:02d}'
+        if is_today:
+            label += " 今天"
+        # 两个刻度太近时，第二个标签往下错一行
+        near = prev is not None and (left - prev) < 9
+        cls = "tk" + (" today" if is_today else "")
+        style = f'left:{max(left, 0.2):.3f}%'
+        if is_today:                      # 今天：红色标签压在最上面，不参与错行
+            span = f'<span style="top:2px;left:5px">{label}</span>'
+        else:
+            span = f'<span style="top:{36 if near else 20}px">{label}</span>'
+        out.append(f'<div class="{cls}" style="{style}">{span}</div>')
+        prev = left
+    return "".join(out)
+
+
+def _grid(m: dict) -> str:
+    """贯穿泳道的竖线：每个起止日一条，今天的线用红色。"""
+    out = []
+    for d in _bounds(m):
+        left = BARS_X + BARS_W * _pct(d, m) / 100
+        if d == m["today"]:
+            out.append(f'<div class="vline" style="left:{left:.1f}px"></div>')
+        else:
+            out.append(f'<div class="gline" style="left:{left:.1f}px"></div>')
     return "".join(out)
 
 
@@ -148,6 +173,8 @@ def _lane(kind: str, label: str, en: str, cls: str, rows: list[dict], m: dict) -
         d1 = f'{it["_s"].month:02d}-{it["_s"].day:02d}'
         d2 = f'{it["_e"].month:02d}-{it["_e"].day:02d}'
         open_end = not it.get("end_at")
+        if it.get("end_guess"):
+            d2 = "≈" + d2
         bar_px = BARS_W * width / 100
 
         if kind == "维护":
@@ -211,7 +238,7 @@ def calendar_html(items: list[dict]) -> str:
            f' — {m["hi"].year}.{m["hi"].month:02d}.{m["hi"].day:02d}　·　'
            f'官网公告同步（当前 + 未来）')
     legend = ('<div class="i"><s class="c-act"></s>活动</div>'
-              '<div class="i"><s class="c-sum"></s>召唤</div>'
+              '<div class="i"><s class="c-sum"></s>卡池</div>'
               '<div class="i"><s class="c-mnt"></s>维护</div>'
               f'<div class="i" style="margin-left:auto"><s style="background:#E4573F"></s>今天</div>')
     html = TEMPLATE.read_text(encoding="utf-8")
@@ -219,7 +246,7 @@ def calendar_html(items: list[dict]) -> str:
         "SUB": sub,
         "STATS": "".join(stats),
         "AXIS": _axis(m),
-        "LANES": (lanes + f'<div class="vline" style="left:{BARS_X + BARS_W * left / 100:.1f}px"></div>'),
+        "LANES": lanes + _grid(m),
         "LEGEND_COLOR": legend,
 
         "FOOT_L": f'共 {len(rows)} 项　·　数据来源 FGO 官网公告（B 站）',
