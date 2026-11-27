@@ -39,9 +39,6 @@ def news_html(item: dict) -> str:
     if len(summary) > 260:
         summary = summary[:260].rstrip() + "……"
     meta = [f"发布　{esc((item.get('ctime') or '')[:16])}"]
-    when = item.get("start_at") or ""
-    if when:
-        meta.append(f"维护日　{esc(when)}")
     WEEK = "一二三四五六日"
 
     def _weekday(d: str) -> str:
@@ -57,9 +54,11 @@ def news_html(item: dict) -> str:
         day, hm = ms[:10], ms[11:]
         end_txt = me[11:] if (me and me[:10] == day) else (me or "")
         pretty = f"{int(day[5:7])}月{int(day[8:10])}日"
-        time_band = (f'<div class="band"><span class="k">维 护 时 间</span>'
-                     f'<span class="v">{hm}'
-                     f'<small>～ {end_txt}　·　{pretty} {_weekday(day)}</small></span></div>')
+        est = "（预计）" if str(item.get("maint_est") or "0").strip() == "1" else ""
+        span = f"{hm}~{end_txt}{est}" if end_txt else hm
+        time_band = (f'<div class="band"><span class="k">维护时间</span>'
+                     f'<span class="d2">{pretty} {_weekday(day)}</span>'
+                     f'<span class="v">{span}</span></div>')
 
     items_block = ""
     try:

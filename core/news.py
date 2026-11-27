@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS news(
     comp_time  TEXT NOT NULL DEFAULT '',   -- 发放时间
     intro      TEXT NOT NULL DEFAULT '',   -- 正文开场白（详情页第一个【小标题】之前）
     end_guess  INTEGER NOT NULL DEFAULT 0, -- 结束时间是否由正文「N天内」推断
+    maint_est  INTEGER NOT NULL DEFAULT 0, -- 维护时间是否带「（预计）」
     contents   TEXT NOT NULL DEFAULT '',   -- 维护内容（JSON 数组）
     comp_to    TEXT NOT NULL DEFAULT ''    -- 补偿对象
 );
@@ -66,7 +67,7 @@ def _conn() -> sqlite3.Connection:
     con.executescript(SCHEMA)
     cols = {r[1] for r in con.execute("PRAGMA table_info(news)")}
     for col in ("detail_at", "maint_start", "maint_end", "comp", "comp_time",
-                "contents", "comp_to", "intro", "end_guess"):
+                "contents", "comp_to", "intro", "end_guess", "maint_est"):
         if col not in cols:
             con.execute(f"ALTER TABLE news ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
     con.commit()
@@ -275,15 +276,16 @@ def _parse_items(value: str) -> list[str]:
     return items
 
 
-def _parse_maint_time(value: str) -> tuple[str, str]:
+def _parse_maint_time(value: str) -> tuple[str, str, int]:
+    est = 1 if ("预计" in (value or "")) else 0
     plain = value.replace("（预计）", "").replace("(预计)", "")
     m = _TIME_PAIR.search(plain)
     if not m:
-        return "", ""
+        return "", "", est
     y, mo, d, h, mi, y2, mo2, d2, h2, mi2 = m.groups()
     start = f"{int(y):04d}-{int(mo):02d}-{int(d):02d} {int(h):02d}:{mi}"
     end = f"{int(y2 or y):04d}-{int(mo2):02d}-{int(d2):02d} {int(h2):02d}:{mi2}"
-    return start, end
+    return start, end, est
 
 
 def _row(item: dict) -> dict:
@@ -335,10 +337,11 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             start, end = r["start_at"], r["end_at"]
             mstart = mend = comp = ctime_s = comp_to = ""
             end_guess = 0
+            mest = 0
             items_json = ""
             if r["kind"] == "维护":
                 mt = sec.get("维护时间") or sec.get("维护期间") or ""
-                mstart, mend = _parse_maint_time(mt)
+                mstart, mend, mest = _parse_maint_time(mt)
                 comp = _first_line(sec.get("维护补偿内容") or sec.get("补偿内容") or "")
                 ctime_s = _first_line(sec.get("发放时间") or "", cut_words=("注意事项",))
                 comp_to = _first_line(sec.get("维护补偿对象") or sec.get("补偿对象") or "")
@@ -369,10 +372,10 @@ def refresh_details(budget: int = 25, window_days: int = 45) -> int:
             con.execute(
                 "UPDATE news SET detail_at=?, start_at=?, end_at=?, maint_start=?,"
                 " maint_end=?, comp=?, comp_time=?, contents=?, comp_to=?, intro=?,"
-                " end_guess=? WHERE id=?",
+                " end_guess=?, maint_est=? WHERE id=?",
                 (datetime.now().isoformat(timespec="seconds"), start or "", end or "",
                  mstart, mend, comp.replace("\n", " ")[:120], ctime_s, items_json, comp_to,
-                 intro, end_guess, r["id"]),
+                 intro, end_guess, mest, r["id"]),
             )
             done += 1
             time.sleep(1.2)                      # 别把人家接口打疼
