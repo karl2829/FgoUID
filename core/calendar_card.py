@@ -225,10 +225,7 @@ def calendar_html(items: list[dict]) -> str:
     sub = (f'{m["lo"].year}.{m["lo"].month:02d}.{m["lo"].day:02d}'
            f' — {m["hi"].year}.{m["hi"].month:02d}.{m["hi"].day:02d}　·　'
            f'官网公告同步（当前 + 未来）')
-    legend = ('<div class="i"><s class="c-act"></s>活动</div>'
-              '<div class="i"><s class="c-sum"></s>卡池</div>'
-              '<div class="i"><s class="c-mnt"></s>维护</div>'
-              '<div class="i" style="margin-left:auto"><s style="background:#E4573F"></s>今天</div>')
+    legend = ""
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "SUB": sub,
