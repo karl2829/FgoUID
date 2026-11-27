@@ -106,25 +106,31 @@ def _bounds(m: dict) -> list:
 
 
 def _axis(m: dict) -> str:
+    """刻度线全画；标签按可用宽度避让，放不下就换行，仍放不下就省略。"""
     pts = _bounds(m)
     out = []
-    prev = None
+    rows_end = [-999.0, -999.0]        # 两行标签各自已占到的最右位置
     for d in pts:
         left = _pct(d, m)
         is_today = d == m["today"]
         label = f'{d.month}-{d.day:02d}'
+        need = 6.0 if not is_today else 9.5      # 估宽（百分比，11.5px 字号 5 个字符）
+        spot = None
+        for row in (0, 1):
+            if left - rows_end[row] >= need:
+                spot = row
+                break
         if is_today:
-            label += " 今天"
-        # 两个刻度太近时，第二个标签往下错一行
-        near = prev is not None and (left - prev) < 9
+            spot = 0
         cls = "tk" + (" today" if is_today else "")
         style = f'left:{max(left, 0.2):.3f}%'
-        if is_today:                      # 今天：红色标签压在最上面，不参与错行
-            span = f'<span style="top:2px;left:5px">{label}</span>'
-        else:
-            span = f'<span style="top:{36 if near else 20}px">{label}</span>'
+        span = ""
+        if spot is not None:
+            rows_end[spot] = left + need
+            text = label + (" 今天" if is_today else "")
+            top = "2px" if is_today else ("18px" if spot == 0 else "34px")
+            span = f'<span style="top:{top};left:5px">{text}</span>'
         out.append(f'<div class="{cls}" style="{style}">{span}</div>')
-        prev = left
     return "".join(out)
 
 
