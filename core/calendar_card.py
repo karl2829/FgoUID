@@ -25,7 +25,7 @@ KINDS = (
 PAD_X = 44             # 模板 .inner 的左右 padding
 LABEL_W = 0            # 分类标题改成整行表头，不再占左侧列
 NAME_W = 372           # 名称列
-STATUS_W = 112         # 右侧「截止 xx」列
+STATUS_W = 0           # 状态文字改为跟在条块后面，不再占右列
 CARD_W = 1080
 BARS_X = NAME_W
 BARS_W = CARD_W - PAD_X * 2 - NAME_W - STATUS_W   # 条块区实际宽度(px)
@@ -199,10 +199,24 @@ def _row_html(it: dict, m: dict, kind: str) -> str:
         status = f'{it["_s"].month:02d}-{it["_s"].day:02d}{hour}'
         hot = ""
     dot = KIND_DOT.get(kind, "c-act")
-    bar = f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+    # 状态文字：条块够宽就写在块内右端；否则跟在块尾；再不行放块左侧
+    end_pct = left + width
+    if width >= 32:
+        bar = (f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%">'
+               f'<span class="st in{hot}">{status}</span></div>')
+        st = ""
+    elif end_pct <= 60:
+        bar = f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+        st = f'<div class="st{hot}" style="left:{end_pct + 2.0:.3f}%">{status}</div>'
+    elif left >= 26:
+        bar = f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%"></div>'
+        st = f'<div class="st left{hot}" style="right:{max(100 - left + 1.4, 1.4):.3f}%">{status}</div>'
+    else:
+        bar = (f'<div class="bar {dot}" style="left:{left:.3f}%;width:{width:.3f}%">'
+               f'<span class="st in{hot}">{status}</span></div>')
+        st = ""
     return (f'<div class="row"><div class="name"><span class="dot {dot}"></span>'
-            f'{_html.escape(title)}</div><div class="area">{bar}</div>'
-            f'<div class="status{hot}">{status}</div></div>')
+            f'{_html.escape(title)}</div><div class="area">{bar}{st}</div></div>')
 
 
 def _line(d, m: dict, cls: str = "") -> str:
