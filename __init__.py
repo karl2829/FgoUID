@@ -840,6 +840,54 @@ async def fgo_logout(bot: Bot, ev: Event):
     await bot.send("已解绑，本地数据也已删除")
 
 
+@sv.on_command(("fgo导入", "fgo导入数据"), block=True)
+async def fgo_import(bot: Bot, ev: Event):
+    """导入抓包/导出数据（A 路线）：不扫码也能出卡。"""
+    import urllib.request
+
+    from .core import import_json, profile_store, userprofile
+    from .core.account_card import card_model, get_card_png
+
+    text = (ev.text or "").strip()
+    m = re.search(r"https?://\S+", text)
+    raw: bytes | None = None
+    try:
+        if m:
+            req = urllib.request.Request(m.group(0), headers={"User-Agent": "FGOUID/0.1"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                raw = r.read()
+        elif "{" in text:
+            raw = text.encode()
+        else:
+            return await bot.send(
+                "用法：fgo导入 <链接>\n"
+                "链接指向抓包导出的 login 响应（base64 或已解码 JSON 都行）。\n"
+                "也可以把 JSON 内容直接跟在命令后面。")
+        rep = await asyncio.to_thread(import_json.parse, raw)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 导入解析失败：{e}")
+        return await bot.send("这份数据解析不了，请确认是召唤记录/login 的响应")
+
+    try:
+        model = card_model(rep, {}, "year")
+        uid = int((rep.get("userGame") or [{}])[0].get("userId") or 0)
+        if not uid:
+            return await bot.send("数据里没有找到 UID")
+        userprofile.save(uid, model, {"source": "import"})
+        profile_store.bind(ev.user_id, uid)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 导入建档失败：{e}")
+        return await bot.send("数据解析成功，但建档失败")
+
+    await bot.send(f"导入成功：{model['name']} Lv.{model['lv']} · 五星 {model['five_owned']} 骑")
+    if not image_on(ev):
+        return await bot.send(_summon_text(model, "year"))
+    png = await get_card_png(model, quality_of(ev))
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(_summon_text(model, "year"))
+
+
 @sv.on_fullmatch(("fgo抽卡记录", "fgo召唤记录"), block=True)
 async def fgo_summon_record(bot: Bot, ev: Event):
     await _send_summon_card(bot, ev, mode="year")
