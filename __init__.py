@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import time
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -730,6 +731,110 @@ def calendar_text(limit: int = 12) -> str:
         lines.append(f"（另有 {extra} 条活动公告没标注时间，未列入）")
     lines.append("数据来自 FGO 官网公告，过期条目自动清理")
     return "\n".join(lines)
+
+
+# ---------- 个人数据：扫码登录 ----------
+_LOGIN_LOCK: dict[str, float] = {}
+_LOGIN_TASKS: set[str] = set()
+
+
+@sv.on_fullmatch(("fgo登录", "fgo绑定", "fgo授权"), block=True)
+async def fgo_login(bot: Bot, ev: Event):
+    from .core import login as fgo_login_core
+    from .core import profile_store, userprofile
+    from .core.account_card import card_model, get_card_png
+    from .core.qr import make_png
+
+    qq = str(ev.user_id)
+    if getattr(ev, "group_id", None):
+        return await bot.send("扫码登录涉及账号授权，请私聊我再发送 fgo登录")
+    now = time.time()
+    if qq in _LOGIN_TASKS:
+        return await bot.send("上一次登录还没结束，稍等一下")
+    if now - _LOGIN_LOCK.get(qq, 0) < 600:
+        return await bot.send("10 分钟内已经登录过，请稍后再试")
+
+    try:
+        ticket, url = await asyncio.to_thread(fgo_login_core.issue_qr)
+    except Exception as e:
+        logger.warning(f"[FGOUID] 创建二维码失败：{e}")
+        return await bot.send("二维码创建失败，稍后再试")
+    png = make_png(url)
+    if not png:
+        return await bot.send(f"缺少二维码依赖，请让管理员安装 qrcode。\n扫码地址：{url}")
+
+    _LOGIN_TASKS.add(qq)
+    _LOGIN_LOCK[qq] = now
+    await bot.send([MessageSegment.image(png),
+                    MessageSegment.text("\n请用 B站App 扫码并确认授权（应用应显示「命运-冠位指定」）\n"
+                                        "二维码 2 分钟内有效；授权后我会自动同步数据")])
+    try:
+        access_key = await _wait_scan(ticket, timeout=150)
+        if not access_key:
+            return await bot.send("二维码已失效，请重新发送 fgo登录")
+        uid, nickname, access_key = access_key
+        await bot.send("授权成功，正在登录游戏…")
+        sess = await asyncio.to_thread(fgo_login_core.login_game, access_key, uid, nickname)
+        await bot.send("登录成功，开始同步抽卡数据（约 3~8 分钟，完成后会发卡片）")
+
+        async def _prog(done: int, total: int, got: int):
+            if done in (total,) or done % 150 == 0:
+                logger.info(f"[FGOUID] 同步进度 {done}/{total}，已取 {got} 个卡池")
+
+        rep, histories = await fgo_login_core.fetch_all(sess, progress=_prog)
+        model = card_model(rep, histories, "year")
+        fgo_uid = int((rep.get("userGame") or [{}])[0].get("userId") or sess["sguid"])
+        userprofile.save(fgo_uid, model, {"pools": len(histories)})
+        profile_store.bind(qq, fgo_uid)
+        await bot.send(f"同步完成：{model['five_owned']} 骑五星 · 导出 {get_year_span(model)}")
+        card = await get_card_png(model, quality_of(ev))
+        if card:
+            await bot.send(MessageSegment.image(card))
+    except Exception as e:
+        logger.warning(f"[FGOUID] 登录流程失败：{e}")
+        await bot.send("登录过程中出错了，请稍后重试")
+    finally:
+        _LOGIN_TASKS.discard(qq)
+
+
+def get_year_span(model: dict) -> str:
+    return f"{model.get('year', '')} 年记录"
+
+
+async def _wait_scan(ticket: str, timeout: int = 150):
+    """轮询扫码状态，成功返回 (uid, nickname, access_key)。"""
+    from .core import login as fgo_login_core
+
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        await asyncio.sleep(2)
+        try:
+            data = await asyncio.to_thread(fgo_login_core.poll_ticket, ticket)
+        except Exception:
+            continue
+        body = data.get("data") if isinstance(data.get("data"), dict) else data
+        key = body.get("access_key") or body.get("access_token")
+        if key:
+            return (str(body.get("uid") or ""), str(body.get("uname") or ""), str(key))
+        if str(body.get("status") or "") in ("-1", "2", "expired"):
+            return None
+    return None
+
+
+@sv.on_fullmatch(("fgo登出", "fgo解绑"), block=True)
+async def fgo_logout(bot: Bot, ev: Event):
+    from .core import profile_store, userprofile
+
+    qq = str(ev.user_id)
+    uid = profile_store.uid_of(qq)
+    if not uid:
+        return await bot.send("你还没有绑定账号")
+    profile_store.unbind(qq)
+    try:
+        userprofile.path_for(uid).unlink(missing_ok=True)
+    except Exception:
+        pass
+    await bot.send("已解绑，本地数据也已删除")
 
 
 @sv.on_fullmatch(("fgo抽卡记录", "fgo召唤记录"), block=True)
