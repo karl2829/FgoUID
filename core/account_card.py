@@ -327,14 +327,15 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
             if g.get("gacha_type") == "friendPoint" or draws_n <= 0:
                 continue
             nm = (g.get("name") or "").replace("\n", " ").strip()
-            nm = nm or f"未收录卡池 {gid}"
+            started = int(g.get("started_at") or 0)
+            if not nm or not started:      # 缺名称或时间的池不展示
+                continue
             top.append({
                 "name": nm,
                 "kind": "福袋" if g.get("gacha_type") == "chargeStone" else (
                     "常驻" if "剧情" in nm else "限定"),
                 "draws": draws_n, "five": 0, "four": 0, "faces": [], "records": 0,
-                "time": datetime.fromtimestamp(int(g.get("started_at") or 0)).strftime("%Y-%m")
-                        if g.get("started_at") else "",
+                "time": datetime.fromtimestamp(started).strftime("%Y-%m"),
                 "last_ts": 0,
             })
         top.sort(key=lambda x: -x["draws"])
