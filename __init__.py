@@ -917,6 +917,33 @@ async def fgo_import(bot: Bot, ev: Event):
     await bot.send(_summon_text(model, "year"))
 
 
+@sv.on_fullmatch(("fgo档案", "fgo我的", "fgo御主档案"), block=True)
+async def fgo_profile(bot: Bot, ev: Event):
+    from .core import profile_store
+    from .core.account_card import get_profile_png, reconcile
+
+    uid = profile_store.uid_of(ev.user_id)
+    if not uid:
+        return await bot.send("还没有你的账号数据。\n使用 fgo登录 扫码授权，或用 fgo导入 上传抓包数据。")
+    model = reconcile(profile_store.model_of(ev.user_id))
+    if not model:
+        return await bot.send("账号数据读取失败，请重新 fgo登录。")
+    if not image_on(ev):
+        base = model.get("base") or {}
+        res = model.get("res") or {}
+        return await bot.send(
+            f"{model['name']} Lv.{model['lv']} · UID {model['friend_code']}\n"
+            f"圣晶石 {base.get('stone', 0)}（免费 {base.get('free_stone', 0)} / 付费 {base.get('charge_stone', 0)}）"
+            f" · QP {base.get('qp', 0) / 100000000:.2f} 亿 · AP {base.get('act', 0)}\n"
+            f"圣杯 {res.get('圣杯', 0)} · 梦火 {res.get('梦火', 0)} · "
+            f"传承结晶 {res.get('传承结晶', 0)} · 无记名灵基 {res.get('无记名灵基', 0)}\n"
+            f"五星 {model.get('five_owned', 0)}/{model.get('five', 0)}")
+    png = await get_profile_png(model, quality_of(ev))
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send("档案卡渲染失败，稍后再试")
+
+
 @sv.on_fullmatch(("fgo抽卡记录", "fgo召唤记录"), block=True)
 async def fgo_summon_record(bot: Bot, ev: Event):
     await _send_summon_card(bot, ev, mode="year")

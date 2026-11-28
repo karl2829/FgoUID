@@ -1,0 +1,140 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+/* FGOUID 御主档案卡 · 与从者卡/召唤记录卡同一套金属边框 */
+:root{
+  --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
+  --slot:#0F1729; --panel:#1B2A45;
+  --text-1:#FFFFFF; --text-2:#D7E0ED; --text-3:#AFBCCE; --text-4:#8E9CB0; --num:#FFE9AE;
+  --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227;
+  --metal-ring:linear-gradient(128deg,#6E5620 0%,#C9A227 9%,#F8EDCB 19%,#E8C877 31%,
+               #A8862F 47%,#C9A227 63%,#F5E3AE 79%,#8A6E1A 93%,#C9A227 100%);
+  --pad-x:44px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+  -webkit-font-smoothing:antialiased;color:var(--text-1)}
+.card{width:1080px;padding:1.5px;border-radius:22px;background:var(--metal-ring);
+  box-shadow:0 0 0 1px rgba(227,195,107,.16), 0 0 32px rgba(227,195,107,.10), 0 26px 70px rgba(0,0,0,.66)}
+.inner{position:relative;border-radius:20.5px;overflow:hidden;
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.08);
+  padding-bottom:22px}
+.top-gloss{position:absolute;left:0;right:0;top:0;height:1.5px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 20%,rgba(255,255,255,.14) 48%,rgba(255,255,255,0) 74%)}
+
+.head{padding:24px var(--pad-x) 4px}
+.head .eyebrow{font-size:12.5px;color:#AFBCCE;letter-spacing:.22em}
+.head .eyebrow b{color:var(--gold-mid);font-weight:400}
+.head .name{font-size:38px;color:var(--gold-hi);letter-spacing:.14em;margin-top:7px}
+
+.sec-h{display:flex;align-items:center;gap:16px;margin:20px var(--pad-x) 0}
+.sec-h .bar{width:5px;height:22px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
+.sec-h .t{font-size:20px;color:var(--gold-hi);letter-spacing:.2em}
+.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.6),rgba(201,162,39,0))}
+.sec-h .n{font-size:13px;color:#C3CFDF;letter-spacing:.12em}
+
+/* 御主 */
+.who{margin:10px var(--pad-x) 0;display:flex;align-items:center;gap:20px;padding:16px 20px;border-radius:16px;
+  background:linear-gradient(180deg,#1E2F4D,#182742);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.28)}
+.who .pic{width:96px;height:96px;border-radius:14px;overflow:hidden;flex:0 0 96px;background:var(--slot);
+  box-shadow:0 0 0 2px rgba(11,18,32,.72), 0 0 0 3.5px rgba(201,162,39,.62)}
+.who .pic img{display:block;width:96px;height:96px}
+.who .info{flex:1 1 auto;min-width:0}
+.who .line1{display:flex;align-items:baseline;gap:14px}
+.who .nick{font-size:{{NAME_SIZE}}px;color:var(--gold-hi);white-space:nowrap;line-height:1.15}
+.who .lv{font-size:17px;color:#C6D2E2}
+.who .line2{font-size:13.5px;color:#C9D5E5;margin-top:8px}
+.who .fav{flex:0 0 auto;text-align:right;padding-left:18px;border-left:1px solid rgba(255,255,255,.10)}
+.who .fav .lb{font-size:11.5px;color:#93A2B6;letter-spacing:.16em}
+.who .fav .nm{font-size:18px;color:var(--gold);margin-top:6px}
+
+/* 资源 */
+.res{margin:12px var(--pad-x) 0;display:flex;gap:10px}
+.res .box{flex:1 1 0;min-width:0;padding:14px 16px;border-radius:14px;
+  background:linear-gradient(180deg,#1B2A45,#16223A);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.res .box .lb{font-size:12px;color:#A9B8CC;letter-spacing:.1em}
+.res .box .v{font-size:30px;color:var(--num);margin-top:8px;line-height:1.05;white-space:nowrap}
+.res .box .v s{font-size:13px;color:#A9B8CC;text-decoration:none;margin-left:3px}
+.res .box .sub{font-size:11.5px;color:#8E9CB0;margin-top:6px}
+.res2{margin:10px var(--pad-x) 0;display:flex;gap:10px}
+.res2 .m{flex:1 1 0;text-align:center;padding:10px 0;border-radius:12px;
+  background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)}
+.res2 .m b{display:block;font-weight:400;font-size:22px;color:var(--num)}
+.res2 .m i{display:block;font-style:normal;font-size:11.5px;color:#B9C7DA;margin-top:5px}
+
+/* 图鉴：职阶分布 */
+.bars{margin:12px var(--pad-x) 0;display:flex;flex-direction:column;gap:8px}
+.bar{display:flex;align-items:center;gap:12px}
+.bar .cls{flex:0 0 76px;font-size:12.5px;color:#B9C7DA}
+.bar .track{flex:1 1 auto;height:14px;border-radius:7px;background:rgba(0,0,0,.3);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.bar .fill{height:14px;border-radius:7px;
+  background:linear-gradient(90deg,#8A6E1A,#C9A227 55%,#F8EDCB)}
+.bar .n{flex:0 0 44px;text-align:right;font-size:14px;color:var(--gold-hi)}
+
+/* 助战 */
+.deck{margin:12px var(--pad-x) 0;display:flex;flex-wrap:wrap;gap:10px}
+.slot{width:110px;border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#1B2A45,#16223A);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.32)}
+.slot .pic{width:110px;height:110px;overflow:hidden;background:var(--slot)}
+.slot .pic img{display:block;width:110px;height:110px}
+.slot .tx{padding:7px 8px 8px}
+.slot .cl{font-size:10.5px;color:#93A2B6;letter-spacing:.08em}
+.slot .nm{font-size:11.5px;color:#FFFFFF;margin-top:3px;line-height:1.3}
+.slot .ce{font-size:10px;color:#C9A227;margin-top:3px;line-height:1.3}
+
+.foot{display:flex;justify-content:center;margin-top:22px;padding:8px var(--pad-x) 0}
+.foot .l1{font-size:13px;color:#6C7A90}
+</style></head><body>
+<div class="card"><div class="inner">
+<div class="top-gloss"></div>
+
+<div class="head">
+  <div class="eyebrow">M A S T E R&nbsp;／&nbsp;<b>P R O F I L E</b></div>
+  <div class="name">御主档案</div>
+</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">御主</div>
+  <div class="line"></div><div class="n">MASTER</div></div>
+<div class="who">
+  <div class="pic"><img src="{{PUSH_FACE}}"></div>
+  <div class="info">
+    <div class="line1"><span class="nick">{{NAME}}</span><span class="lv">Lv.{{LV}}</span></div>
+    <div class="line2">UID {{FRIEND}}　·　启程 {{START}}　·　累计登录 {{LOGIN}} 天</div>
+  </div>
+  <div class="fav">
+    <div class="lb">中意从者</div>
+    <div class="nm">{{PUSH_NAME}}</div>
+  </div>
+</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">资源</div>
+  <div class="line"></div><div class="n">RESOURCES</div></div>
+<div class="res">
+  <div class="box"><div class="lb">圣晶石</div><div class="v">{{STONE}}<s>颗</s></div>
+    <div class="sub">免费 {{FREE_STONE}} · 付费 {{CHARGE_STONE}}</div></div>
+  <div class="box"><div class="lb">QP</div><div class="v">{{QP}}</div>
+    <div class="sub">好友上限 {{FRIEND_HEAD}}</div></div>
+  <div class="box"><div class="lb">AP</div><div class="v">{{AP}}<s>/149</s></div>
+    <div class="sub">行动力</div></div>
+</div>
+<div class="res2">
+  <div class="m"><b>{{R1}}</b><i>圣杯</i></div>
+  <div class="m"><b>{{R2}}</b><i>梦火</i></div>
+  <div class="m"><b>{{R3}}</b><i>传承结晶</i></div>
+  <div class="m"><b>{{R4}}</b><i>无记名灵基</i></div>
+</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">图鉴</div>
+  <div class="line"></div><div class="n">持有五星 {{FIVE}} / {{FIVE_ALL}}</div></div>
+<div class="bars">{{BARS}}</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">主助战</div>
+  <div class="line"></div><div class="n">SUPPORT</div></div>
+<div class="deck">{{DECK}}</div>
+
+<footer class="foot">
+  <div class="l1">数据来源　游戏登录快照 · Atlas Academy　｜　版权所有　TYPE-MOON / FGO PROJECT</div>
+</footer>
+</div></div></body></html>

@@ -25,6 +25,17 @@ PKG = Path(__file__).resolve().parent.parent
 TEMPLATE = PKG / "templates" / "account_card.html"
 FACE = "https://static.atlasacademy.io/CN/Faces/f_{}0.png"
 
+CLASS_CN = {
+    "saber": "剑士", "archer": "弓兵", "lancer": "枪兵", "rider": "骑兵",
+    "caster": "魔术师", "assassin": "暗匿者", "berserker": "狂战士",
+    "ruler": "裁定者", "avenger": "复仇者", "alterEgo": "他人格",
+    "moonCancer": "月之癌", "foreigner": "降临者", "pretender": "伪装者",
+    "shielder": "盾兵", "beast": "兽", "grandCaster": "冠位魔术师",
+}
+CLASS_ORDER = {"saber": 1, "archer": 2, "lancer": 3, "rider": 4, "caster": 5,
+               "assassin": 6, "berserker": 7, "ruler": 8, "avenger": 9,
+               "alterEgo": 10, "moonCancer": 11, "foreigner": 12, "pretender": 13}
+
 # 欧非评级（FGO 化）
 # 出货率（五星 / 石抽）相对官方 1% 的比值 → 评级
 TIERS = (
@@ -255,6 +266,59 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
     yg.sort(key=lambda x: -x["cno"] or -x["svt_id"])
     recent = yg or grid
 
+    # ===== 御主档案卡用的数据 =====
+    items = {}
+    try:
+        items = {int(r["itemId"]): int(r.get("num") or 0) for r in (rep.get("userItem") or [])}
+    except (TypeError, ValueError):
+        items = {}
+    res = {
+        "圣杯": items.get(7999, 0),
+        "梦火": items.get(1000, 0),
+        "传承结晶": items.get(6999, 0),
+        "无记名灵基": items.get(17, 0),
+    }
+    base = {
+        "stone": int(ug.get("stone") or 0),
+        "free_stone": int(ug.get("freeStone") or 0),
+        "charge_stone": int(ug.get("chargeStone") or 0),
+        "qp": int(ug.get("qp") or 0),
+        "act": int(ug.get("actMax") or 0),
+        "friend_head": int(ug.get("friendKeepBase") or 0),
+        "svt_head": int(ug.get("svtKeepBase") or 0),
+    }
+    # 持有五星的职阶分布
+    class_cnt = Counter()
+    for sid in (int(r["svtId"]) for r in (rep.get("userSvt") or [])):
+        meta = svt.get(sid)
+        if meta and int(meta.get("rarity") or 0) == 5:
+            cls = str(meta.get("servant_class") or "other")
+            if cls.lower().startswith("beast") or cls.startswith("Beast"):
+                cls = "beast"
+            class_cnt[cls] += 1
+    # 主助战编成（supportDeckId = 1）
+    deck = []
+    for r in (rep.get("userSvtLeader") or []):
+        if str(r.get("supportDeckId")) != "1":
+            continue
+        try:
+            sid = int(r["svtId"])
+        except (TypeError, ValueError):
+            continue
+        meta = svt.get(sid) or {}
+        eq = r.get("equipTarget1")
+        ce_name = ""
+        if isinstance(eq, dict):
+            ce_name = str((ce.get(int(eq.get("svtId") or 0)) or {}).get("name") or "")
+        deck.append({
+            "cls": str(meta.get("servant_class") or ""),
+            "name": meta.get("name", ""),
+            "lv": int(r.get("lv") or 0),
+            "face": f"face_{sid}.png", "face_url": FACE.format(sid),
+            "ce": ce_name,
+        })
+    deck.sort(key=lambda d: CLASS_ORDER.get(d["cls"], 99))
+
     # 单推从者（头部头像）
     push = {}
     try:
@@ -389,6 +453,11 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
         "tier": tier,
         "tier_desc": desc,
         "tier_color": tier_color,
+        "res": res,
+        "base": base,
+        "class_cnt": [{"cls": k, "name": CLASS_CN.get(k, k), "n": v}
+                      for k, v in sorted(class_cnt.items(), key=lambda kv: -kv[1])],
+        "deck": deck,
         "grid": grid,
         "grid_year": recent,
         "mode": mode,
@@ -501,6 +570,88 @@ def model_for(uid: int | str) -> dict:
     from . import userprofile
 
     return userprofile.load(uid) or {}
+
+
+PROFILE_TEMPLATE = TEMPLATE.parent / "profile_card.html"
+
+
+def profile_html(model: dict) -> str:
+    """御主档案卡：御主 / 资源 / 图鉴 / 主助战。"""
+    esc = _html.escape
+    base = model.get("base") or {}
+    res = model.get("res") or {}
+    max_n = max((c["n"] for c in model.get("class_cnt") or []), default=1) or 1
+    bars = "".join(
+        f'<div class="bar"><div class="cls">{esc(c["name"])}</div>'
+        f'<div class="track"><div class="fill" style="width:{max(6, c["n"] / max_n * 100):.0f}%"></div></div>'
+        f'<div class="n">{c["n"]}</div></div>'
+        for c in (model.get("class_cnt") or []))
+    deck = "".join(
+        f'<div class="slot"><div class="pic"><img src="../assets/{d["face"]}"></div>'
+        f'<div class="tx"><div class="cl">{esc(CLASS_CN.get(d["cls"], d["cls"]))} · Lv.{d["lv"]}</div>'
+        f'<div class="nm">{esc(d["name"][:10])}</div>'
+        + (f'<div class="ce">{esc(d["ce"][:12])}</div>' if d.get("ce") else '')
+        + '</div></div>'
+        for d in (model.get("deck") or []))
+    html = PROFILE_TEMPLATE.read_text(encoding="utf-8")
+    for key, val in {
+        "NAME": _nick_html(model.get("name", "")),
+        "NAME_SIZE": str(_name_size(model.get("name", ""))),
+        "LV": str(model.get("lv", "")),
+        "FRIEND": esc(str(model.get("friend_code", ""))),
+        "START": esc(model.get("start", "")),
+        "LOGIN": f"{model.get('login_days', 0):,}",
+        "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
+        "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",
+        "STONE": f"{base.get('stone', 0):,}",
+        "FREE_STONE": str(base.get("free_stone", 0)),
+        "CHARGE_STONE": str(base.get("charge_stone", 0)),
+        "QP": f"{base.get('qp', 0) / 100000000:.2f}<s>亿</s>",
+        "BOND_QP": f"{base.get('friend_head', 0)}",
+        "FRIEND_HEAD": str(base.get("friend_head", 0)),
+        "AP": str(base.get("act", 0)),
+        "R1": str(res.get("圣杯", 0)), "R2": str(res.get("梦火", 0)),
+        "R3": str(res.get("传承结晶", 0)), "R4": str(res.get("无记名灵基", 0)),
+        "FIVE": str(model.get("five_owned", 0)),
+        "FIVE_ALL": str(model.get("five", 0)),
+        "BARS": bars or '<div class="hint">暂无数据</div>',
+        "DECK": deck or '<div class="hint">暂无助战数据</div>',
+    }.items():
+        html = html.replace("{{%s}}" % key, val)
+    left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
+    if left:
+        raise ValueError(f"档案卡模板还有未填充占位符：{left[:3]}")
+    return html
+
+
+async def get_profile_png(model: dict, quality: str = "std") -> bytes | None:
+    if not render.available() or not model:
+        return None
+    html = profile_html(model)
+    key = hashlib.sha1((html + quality + "p").encode("utf-8")).hexdigest()[:12]
+    d = store.file("cards")
+    d.mkdir(parents=True, exist_ok=True)
+    path = d / f"prof_{key}.img"
+    if path.is_file():
+        return path.read_bytes()
+    from ..card import fetch as card_fetch
+
+    mapping = {}
+    if model.get("push"):
+        mapping[model["push"]["face"]] = model["push"]["face_url"]
+    for d2 in (model.get("deck") or []):
+        mapping[d2["face"]] = d2["face_url"]
+    images = await asyncio.to_thread(card_fetch.remote_images, mapping, 8)
+    png = await render.render_png(html, PROFILE_TEMPLATE.parent, quality=quality,
+                                  extra_images=images, bleed=28, margin=8)
+    try:
+        path.write_bytes(png)
+        for stale in d.glob("prof_*.img"):
+            if stale.name != path.name:
+                stale.unlink(missing_ok=True)
+    except Exception:
+        pass
+    return png
 
 
 def card_html(model: dict) -> str:
