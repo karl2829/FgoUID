@@ -387,6 +387,18 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
     }
 
 
+def _name_size(name: str) -> int:
+    """昵称越长字号越小，保证单行不换行。"""
+    n = len(re.sub(r"^\[[a-zA-Z]\]", "", name or ""))
+    if n <= 8:
+        return 42
+    if n <= 11:
+        return 34
+    if n <= 14:
+        return 28
+    return 24
+
+
 def _nick_html(name: str) -> str:
     """游戏昵称里 [xxx] 是颜色标记（如 [g] 金色），不显示，只影响颜色。"""
     esc = _html.escape
@@ -433,6 +445,7 @@ def card_html(model: dict) -> str:
     html = TEMPLATE.read_text(encoding="utf-8")
     for key, val in {
         "NAME": _nick_html(model["name"]),
+        "NAME_SIZE": str(_name_size(model.get("name", ""))),
         "LV": str(model["lv"]),
         "START": esc(model.get("start", "")),
         "LOGIN": f"{model.get('login_days', 0):,}",
