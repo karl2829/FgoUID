@@ -215,8 +215,11 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             meta = svt.get(sid) or {}
             if not meta:
                 continue
+            rar = int(meta.get("rarity") or 0)
+            if rar < 4:
+                continue
             faces.append({"face": f"face_{sid}.png", "face_url": FACE.format(sid),
-                          "name": meta.get("name", ""), "rarity": int(meta.get("rarity") or 0)})
+                          "name": meta.get("name", ""), "rarity": rar})
         kind = "福袋" if g.get("gacha_type") == "chargeStone" else (
             "常驻" if "剧情" in (g.get("name") or "") or "常驻" in (g.get("name") or "") else "限定")
         pools.append({
@@ -229,7 +232,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "time": (datetime.fromtimestamp(max(ts)).strftime("%m-%d") if ts else ""),
             "last_ts": max(ts) if ts else 0,
         })
-    pools.sort(key=lambda p: -p["last_ts"])
+    pools.sort(key=lambda p: (p["kind"] == "常驻", -p["last_ts"]))
     events.sort(key=lambda e: -e["ts"])
     for e in events:
         e["time"] = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M")
@@ -270,7 +273,9 @@ def card_html(model: dict) -> str:
     esc = _html.escape
     cells = "".join(
         f'<div class="cell"><img src="../assets/{g["face"]}">'
-        f'<span class="cnt">×{g["count"]}</span></div>'
+        ''
+        + (f'<span class="cnt">×{g["count"]}</span>' if g["count"] > 1 else '')
+        + ('' if g.get("owned", True) else '<span class="gone">已变还</span>') + '</div>'
         for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph">'

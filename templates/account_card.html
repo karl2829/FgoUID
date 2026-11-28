@@ -5,7 +5,7 @@
 :root{
   --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
   --panel:#1B2A45; --slot:#0F1729;
-  --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --text-4:#6C7A90; --num:#F0D48A;
+  --text-1:#FFFFFF; --text-2:#D7E0ED; --text-3:#AFBCCE; --text-4:#8E9CB0; --num:#FFE9AE;
   --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-deep:#8A6E1A;
   --metal-ring:linear-gradient(128deg,#6E5620 0%,#C9A227 9%,#F8EDCB 19%,#E8C877 31%,
                #A8862F 47%,#C9A227 63%,#F5E3AE 79%,#8A6E1A 93%,#C9A227 100%);
@@ -35,7 +35,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .sec-h .bar{width:5px;height:22px;border-radius:2px;background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
 .sec-h .t{font-size:20px;color:var(--gold-hi);letter-spacing:.2em}
 .sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,rgba(201,162,39,.5),rgba(201,162,39,0))}
-.sec-h .n{font-size:13px;color:var(--text-3);letter-spacing:.14em}
+.sec-h .n{font-size:13.5px;color:#B9C6D8;letter-spacing:.12em}
 
 /* ① 御主信息区 */
 .who{margin:10px var(--pad-x) 0;display:flex;align-items:center;gap:20px;padding:18px 20px;
@@ -47,7 +47,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .who .info{flex:1 1 auto;min-width:0}
 .who .nick{font-size:46px;line-height:1.1;color:var(--gold-hi)}
 .who .nick .lv{font-size:18px;color:var(--text-3);margin-left:14px}
-.who .meta{font-size:13px;color:var(--text-2);margin-top:8px;letter-spacing:.04em}
+.who .meta{font-size:14px;color:#C8D5E6;margin-top:9px;letter-spacing:.03em}
 .who .fav{flex:0 0 auto;text-align:right}
 .who .fav .lb{font-size:11px;color:var(--text-4);letter-spacing:.18em}
 .who .fav .nm{font-size:15px;color:var(--gold);margin-top:6px}
@@ -58,7 +58,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 2px 12px rgba(0,0,0,.3)}
 .sum .m b{display:block;font-weight:400;font-size:34px;color:var(--num);line-height:1.1}
 .sum .m b s{font-size:15px;color:var(--text-3);text-decoration:none;margin-left:3px}
-.sum .m i{display:block;font-style:normal;font-size:12.5px;color:#C9D4E4;margin-top:7px;letter-spacing:.06em}
+.sum .m i{display:block;font-style:normal;font-size:13.5px;color:#DCE6F2;margin-top:8px;letter-spacing:.04em}
 .tier{margin:12px var(--pad-x) 0;padding:14px 18px;border-radius:14px;display:flex;align-items:center;gap:16px;
   background:linear-gradient(180deg,#22345A,#1A2A46);box-shadow:inset 0 0 0 1px rgba(201,162,39,.35)}
 .tier .t{font-size:27px;color:{{TIER_COLOR}};letter-spacing:.06em}
@@ -75,7 +75,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 5px;border-radius:4px;line-height:1.55;z-index:3}
 .cell .gone{position:absolute;left:0;right:0;bottom:0;font-size:9.5px;text-align:center;
   color:#D9E2EF;background:rgba(8,13,21,.7);line-height:1.5}
-.hint{margin:10px var(--pad-x) 0;font-size:11.5px;color:var(--text-4);letter-spacing:.03em}
+.hint{margin:10px var(--pad-x) 0;font-size:12.5px;color:#9FAEC2;letter-spacing:.02em}
 .hint b{color:var(--gold);font-weight:400}
 
 /* ④ 近期卡池 */
@@ -86,15 +86,15 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   background:linear-gradient(180deg,#F8EDCB,#C9A227)}
 .pb .tag.c{background:linear-gradient(180deg,#C8D6E8,#8FA6C2)}
 .pb .tag.f{background:linear-gradient(180deg,#E8C8A8,#C28F5F)}
-.pb .pn{flex:1 1 auto;min-width:0;font-size:14px;color:var(--text-1);overflow:hidden;white-space:nowrap}
-.pb .pt{font-size:11.5px;color:var(--text-4)}
+.pb .pn{flex:1 1 auto;min-width:0;font-size:15px;color:#FFFFFF;overflow:hidden;white-space:nowrap}
+.pb .pt{font-size:12.5px;color:#A9B7C9}
 .pb .pd{font-size:16px;color:var(--num);font-variant-numeric:tabular-nums}
 .pb .pf{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .pb .fc{width:42px;height:42px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px rgba(201,162,39,.3)}
 .pb .fc img{display:block;width:42px;height:42px}
-.pb .none{font-size:11.5px;color:var(--text-4);margin-top:8px}
+.pb .none{font-size:12px;color:#93A2B6;margin-top:8px}
 .foot{margin:22px var(--pad-x) 0;padding-top:12px;border-top:1px solid rgba(42,59,96,.85);
-  font-size:11px;color:var(--text-4);display:flex;justify-content:space-between}
+  font-size:11.5px;color:#8E9CB0;display:flex;justify-content:space-between}
 </style></head><body>
 <div class="card"><div class="inner">
 <div class="top-gloss"></div>
