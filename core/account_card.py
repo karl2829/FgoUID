@@ -81,6 +81,12 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
             cno = {}
         ce = by_id("SELECT id, name, rarity FROM craft_essences WHERE region='CN'")
         gtype = by_id("SELECT id, name, gacha_type, started_at, ended_at FROM gacha_names")
+        try:
+            newyear_pools = [(r[0] or "", r[1] or "[]", int(r[2] or 0)) for r in con.execute(
+                "SELECT name, featured, started_at FROM gacha_names"
+                " WHERE name LIKE '新年%' ORDER BY started_at ASC")]
+        except sqlite3.Error:
+            newyear_pools = []
         total_five = con.execute(
             "SELECT COUNT(*) FROM servants WHERE region='CN' AND rarity=5"
             " AND (gacha IS NULL OR gacha <> 'enemyCollectionDetail')").fetchone()[0]
@@ -225,19 +231,26 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
                 "owned": sid in owned_ids,
                 "face": f"face_{sid}.png", "face_url": FACE.format(sid),
             })
-    # 今年图鉴里出现过的五星（含未获得），用于「获得 X / 图鉴 Y」
+    # 当年新增五星总数（全服口径，与玩家无关）：以「新年{year}」卡池的从者为起点，
+    # 图鉴编号 >= 该从者的五星都算本年度新增
     year_all = 0
-    for r in coll:
-        try:
-            sid = int(r["svtId"])
-        except (TypeError, ValueError):
-            continue
-        meta = svt.get(sid)
-        if not meta or int(meta.get("rarity") or 0) != 5:
-            continue
-        ts = int(r.get("createdAt") or 0)
-        if ts and year_start <= ts < year_end:
-            year_all += 1
+    try:
+        start_cno = None
+        row = next((r for r in newyear_pools if r[0].startswith(f"新年{year}")), None)
+        if row and row[1]:
+            ids = [int(x) for x in json.loads(row[1])]
+            cands = [cno[s] for s in ids if s in cno]
+            if cands:
+                start_cno = min(cands)
+        if start_cno is None:
+            start_cno = max(cno.values()) + 1 if cno else 0
+        year_all = sum(
+            1 for sid, meta in svt.items()
+            if int(meta.get("rarity") or 0) == 5
+            and meta.get("gacha") != "enemyCollectionDetail"
+            and cno.get(sid, 0) >= start_cno)
+    except (sqlite3.Error, ValueError, TypeError):
+        year_all = 0
 
     yg.sort(key=lambda x: -x["cno"] or -x["svt_id"])
     recent = yg or grid
@@ -410,6 +423,52 @@ def _nick_html(name: str) -> str:
     return esc(m.group(1) if m else (name or ""))
 
 
+def year_five_total(year: int) -> int:
+    """国服「year」年度新增的可获得五星总数（全服口径，与玩家无关）。
+
+    起点取「新年{year}」卡池的从者图鉴编号，编号 >= 它的五星都算本年度新增。
+    """
+    try:
+        con = _con()
+    except sqlite3.Error:
+        return 0
+    try:
+        cno = {}
+        try:
+            import zlib
+
+            for sid, data in con.execute("SELECT id, data FROM servant_cards"):
+                try:
+                    d = json.loads(zlib.decompress(data))
+                    if d.get("collection_no"):
+                        cno[int(sid)] = int(d["collection_no"])
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        row = con.execute(
+            "SELECT featured FROM gacha_names WHERE name LIKE ? ORDER BY started_at ASC LIMIT 1",
+            (f"新年{year}%",)).fetchone()
+        if not row or not row[0]:
+            return 0
+        try:
+            cands = [cno[int(x)] for x in json.loads(row[0]) if int(x) in cno]
+        except (ValueError, TypeError):
+            cands = []
+        if not cands:
+            return 0
+        start_cno = min(cands)
+        meta = {int(r[0]): (int(r[1] or 0), r[2]) for r in con.execute(
+            "SELECT id, rarity, gacha FROM servants WHERE region='CN'")}
+        return sum(1 for sid, c in cno.items()
+                   if c >= start_cno and meta.get(sid, (0, None))[0] == 5
+                   and meta.get(sid, (0, None))[1] != "enemyCollectionDetail")
+    except sqlite3.Error:
+        return 0
+    finally:
+        con.close()
+
+
 def reconcile(model: dict) -> dict:
     """给旧汇总档补齐「固定口径」字段（图鉴分母），避免必须重新同步。"""
     if not model:
@@ -425,6 +484,14 @@ def reconcile(model: dict) -> dict:
         if total:
             model["five"] = int(total)
     except sqlite3.Error:
+        pass
+    try:
+        year = int(model.get("year") or 0)
+        if year:
+            n = year_five_total(year)
+            if n:
+                model["year_all"] = n
+    except Exception:
         pass
     return model
 
