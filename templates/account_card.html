@@ -61,29 +61,28 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .who .kv i{font-style:normal;font-size:12px;color:#93A2B6;letter-spacing:.12em;display:block}
 .who .kv b{font-weight:400;font-size:17px;color:#FFFFFF;display:block;margin-top:4px}
 
-/* ② 总记录：数据行在上，评价横幅在下 */
-.statwrap{margin:12px var(--pad-x) 0}
-.databox{display:flex;border-radius:14px;height:92px;overflow:hidden;
-  background:linear-gradient(180deg,#1B2A45,#16223A);
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
-.databox .st{flex:1 1 0;min-width:0;text-align:center;padding-top:24px}
-.databox .st b{display:block;font-weight:400;font-size:28px;color:var(--num);line-height:1;white-space:nowrap}
-.databox .st b s{font-size:13px;color:#A9B8CC;text-decoration:none;margin-left:2px}
-.databox .st i{display:block;font-style:normal;font-size:12px;color:#C2CFE0;margin-top:9px;letter-spacing:.04em}
-.databox .vs{width:1px;height:52px;margin-top:20px;
-  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.18) 50%,rgba(255,255,255,0))}
-.verdict{margin-top:10px;display:flex;align-items:center;gap:18px;height:64px;padding:0 22px;
-  border-radius:14px;background:linear-gradient(90deg,#2A3E66,#1D2C4A 62%,#1B2A46);
-  box-shadow:inset 0 0 0 1px rgba(201,162,39,.5)}
-.verdict .lb{font-size:12px;color:#A9B8CC;letter-spacing:.12em}
-.verdict .rate{font-size:34px;color:var(--gold-hi);line-height:1;margin-left:6px}
-.verdict .rate s{font-size:16px;text-decoration:none;color:var(--gold);margin-left:1px}
-.verdict .avg{font-size:12px;color:#B9C7DA;margin-left:4px}
-.verdict .vsep{width:1px;height:30px;background:rgba(255,255,255,.14)}
-.verdict .tier{font-size:23px;color:{{TIER_COLOR}};letter-spacing:.06em;white-space:nowrap}
-.verdict .bar{flex:1 1 auto;height:6px;border-radius:3px;background:rgba(0,0,0,.4)}
-.verdict .bar i{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,#F8EDCB,#C9A227)}
-.statbox,.statrow,.sumrow{display:none}
+/* ② 总记录：一张卡 + 左下角评级角标 */
+.statwrap{margin:12px var(--pad-x) 0;position:relative;padding:16px 20px 14px;
+  border-radius:16px;background:linear-gradient(180deg,#1E2F4D,#172540);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.28)}
+.statrow{display:flex}
+.statrow .st{flex:1 1 0;min-width:0;text-align:center}
+.statrow .st b{display:block;font-weight:400;font-size:29px;color:var(--num);line-height:1;white-space:nowrap}
+.statrow .st b s{font-size:13px;color:#A9B8CC;text-decoration:none;margin-left:2px}
+.statrow .st i{display:block;font-style:normal;font-size:12px;color:#C2CFE0;margin-top:8px;letter-spacing:.04em}
+.statrow .vs{width:1px;margin:2px 0;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.16) 50%,rgba(255,255,255,0))}
+.stamprow{display:flex;align-items:center;gap:16px;margin-top:14px}
+.stamp{display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:10px;
+  background:linear-gradient(180deg,rgba(201,162,39,.16),rgba(201,162,39,.06));
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.65)}
+.stamp .tier{font-size:24px;color:{{TIER_COLOR}};letter-spacing:.06em;line-height:1.1;white-space:nowrap}
+.stamp .vsep{width:1px;height:24px;background:rgba(201,162,39,.45)}
+.stamp .rate{font-size:22px;color:var(--gold-hi);line-height:1.1;white-space:nowrap}
+.stamp .rate s{font-size:13px;text-decoration:none;color:var(--gold)}
+.stamprow .avg{font-size:12px;color:#B9C7DA;white-space:nowrap}
+.stamprow .bar{flex:1 1 auto;height:6px;border-radius:3px;background:rgba(0,0,0,.4)}
+.stamprow .bar i{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,#F8EDCB,#C9A227)}
+.statbox,.databox,.verdict,.sumrow{display:none}
 
 /* ③ 年记录 */
 .grid{margin:12px var(--pad-x) 0;display:flex;flex-wrap:wrap;gap:8px}
@@ -151,7 +150,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 <div class="sec-h"><div class="bar"></div><div class="t">总记录</div>
   <div class="line"></div><div class="n">ALL TIME</div></div>
 <div class="statwrap">
-  <div class="databox">
+  <div class="statrow">
     <div class="st"><b>{{DRAWS}}<s>抽</s></b><i>总抽数</i></div>
     <div class="vs"></div>
     <div class="st"><b>{{BAG_TIMES}}<s>次</s></b><i>福袋</i></div>
@@ -160,12 +159,13 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
     <div class="vs"></div>
     <div class="st"><b>{{COLL_FIVE}}<s>个</s></b><i>五星总数</i></div>
   </div>
-  <div class="verdict">
-    <div class="lb">出货率</div>
-    <div class="rate">{{RATE}}<s>%</s></div>
+  <div class="stamprow">
+    <div class="stamp">
+      <div class="tier">{{TIER}}</div>
+      <div class="vsep"></div>
+      <div class="rate">{{RATE}}<s>%</s></div>
+    </div>
     <div class="avg">平均 {{AVG}} 抽 / 五星</div>
-    <div class="vsep"></div>
-    <div class="tier">{{TIER}}</div>
     <div class="bar"><i style="width:{{RATE_W}}%"></i></div>
   </div>
 </div>
