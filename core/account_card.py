@@ -112,16 +112,16 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         except (TypeError, ValueError):
             return 0
 
-    five = [r for r in coll if rarity_of(r) == 5 and playable(r)]
-    four = [r for r in coll if rarity_of(r) == 4 and playable(r)]
+    five = [r for r in coll if rarity_of(r) == 5]
+    four = [r for r in coll if rarity_of(r) == 4]
     bag_draws = totals["chargeStone"]           # 福袋抽数
     stone_draws = totals["stone"]               # 圣晶石池抽数
     total_draws = bag_draws + stone_draws
     # 福袋一次 10 连（必出 1 五星）；2020-08 后国服改 11 连，按 11 计
     bag_times = math.ceil(bag_draws / 11.0) if bag_draws else 0
     bag_five = bag_times                       # 每个福袋 ≈ 1 个五星
-    coll_five = sum(max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1)
-                    for r in five)             # 累计获得的五星（含重复）
+    coll_five = sum(max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0))
+                    for r in five)             # 累计获得的五星（含重复，不含未获得的）
     pure_five = max(coll_five - bag_five, 1)   # 扣除福袋后的五星
     avg = stone_draws / pure_five              # 平均每五星（石抽口径）
     rate = (pure_five / stone_draws * 100) if stone_draws else 0.0
