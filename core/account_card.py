@@ -183,8 +183,10 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 continue
 
     year = datetime.now().year
-    # FGO 新年从者 12-31 开池，年度统计从上一年的 12-31 起算
+    # FGO 新年从者 12-31 开池：本年度 = [上一年 12-31, 本年 12-31)
+    # 本年 12-31 开出的是下一年的新年从者，所以不计入本年
     year_start = datetime(year - 1, 12, 31).timestamp()
+    year_end = datetime(year, 12, 31).timestamp()
     # 今年新获得（图鉴口径，含已变还的），按实装顺序倒排
     yg = []
     for r in five:
@@ -195,7 +197,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         got_n = max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0))
         if got_n <= 0:
             continue
-        if ts and ts >= year_start:
+        if ts and year_start <= ts < year_end:
             sid = int(r["svtId"])
             meta = svt.get(sid, {})
             yg.append({
@@ -220,7 +222,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         if not meta or int(meta.get("rarity") or 0) != 5:
             continue
         ts = int(r.get("createdAt") or 0)
-        if ts and ts >= year_start:
+        if ts and year_start <= ts < year_end:
             year_all += 1
 
     yg.sort(key=lambda x: -x["cno"] or -x["svt_id"])
