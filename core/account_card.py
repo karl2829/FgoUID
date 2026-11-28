@@ -149,6 +149,21 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "face_url": FACE.format(sid),
         })
     grid.sort(key=lambda x: -x["cno"] or -x["svt_id"])   # 按实装顺序倒排（图鉴编号）
+    gacha_num = {int(r["gachaId"]): int(r["num"]) for r in (rep.get("userGacha") or [])}
+    obtain_pool = {}
+    for gid, rows in histories.items():
+        for r in rows:
+            if r.get("giftType") != 1:
+                continue
+            try:
+                sid = int(r["objectId"])
+                ts = int(r["createdAt"] or 0)
+            except (TypeError, ValueError):
+                continue
+            prev = obtain_pool.get(sid)
+            if not prev or ts > prev[1]:
+                obtain_pool[sid] = (int(gid), ts)
+
     year = datetime.now().year
     # 今年新获得（图鉴口径，含已变还的），按实装顺序倒排
     yg = []
@@ -164,6 +179,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 "svt_id": sid, "name": meta.get("name", ""),
                 "cno": cno.get(sid, 0),
                 "got": datetime.fromtimestamp(ts).strftime("%m-%d"),
+                "pool_draws": (gacha_num.get(obtain_pool[sid][0], 0)
+                               if sid in obtain_pool else 0),
                 "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
                 "owned": sid in owned_ids,
                 "face": f"face_{sid}.png", "face_url": FACE.format(sid),
@@ -211,7 +228,6 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 "kind": kind,
                 "rarity": rarity,
             })
-    gacha_num = {int(r["gachaId"]): int(r["num"]) for r in (rep.get("userGacha") or [])}
     pools = []
     for gid, rows in histories.items():
         g = gtype.get(int(gid), {})
@@ -299,12 +315,14 @@ def _nick_html(name: str) -> str:
 
 def card_html(model: dict) -> str:
     esc = _html.escape
-    cells = "".join(
-        f'<div class="cell"><img src="../assets/{g["face"]}">'
-        ''
-        + f'<span class="cnt">×{g["count"]}</span>' 
-        + ('' if g.get("owned", True) else '<span class="gone">已变还</span>') + '</div>'
-        for g in model["grid_year"])
+    def _cell(g: dict) -> str:
+        label = f'{g["pool_draws"]}抽' if g.get("pool_draws") else g.get("got", "")
+        gone = '' if g.get("owned", True) else '<span class="gone">已变还</span>'
+        return (f'<div class="cell"><img src="../assets/{g["face"]}">'
+                f'<span class="cnt">×{g["count"]}</span>{gone}'
+                f'<span class="got">{label}</span></div>')
+
+    cells = "".join(_cell(g) for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph">'
         f'<span class="tag">{p["kind"]}</span>'
