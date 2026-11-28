@@ -313,6 +313,13 @@ def _nick_html(name: str) -> str:
     return esc(m.group(1) if m else (name or ""))
 
 
+def model_for(uid: int | str) -> dict:
+    """读汇总档出模型（不再请求游戏接口）。"""
+    from . import userprofile
+
+    return userprofile.load(uid) or {}
+
+
 def card_html(model: dict) -> str:
     esc = _html.escape
     def _cell(g: dict) -> str:
