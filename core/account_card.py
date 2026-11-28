@@ -10,6 +10,7 @@ import asyncio
 import hashlib
 import html as _html
 import json
+import math
 import re
 import sqlite3
 from collections import Counter, defaultdict
@@ -111,7 +112,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
     stone_draws = totals["stone"]               # 圣晶石池抽数
     total_draws = bag_draws + stone_draws
     # 福袋一次 10 连（必出 1 五星）；2020-08 后国服改 11 连，按 11 计
-    bag_times = bag_draws / 11.0
+    bag_times = math.ceil(bag_draws / 11.0) if bag_draws else 0
     bag_five = bag_times                       # 每个福袋 ≈ 1 个五星
     coll_five = sum(max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1)
                     for r in five)             # 累计获得的五星（含重复）
@@ -242,7 +243,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         pools.append({
             "kind": kind,
             "faces": faces[:12],
-            "name": g.get("name", f"卡池 {gid}"),
+            "name": (g.get("name") or f"卡池 {gid}").replace("\n", " "),
             "draws": gacha_num.get(int(gid), 0),
             "records": len(cards),
             "five": five_n,
@@ -280,6 +281,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "grid_year": recent,
         "year": year,
         "grid_total": len(grid),
+        "pool_draws": sum(p["draws"] for p in pools),
+
         "push": push,
         "pools": pools[:10],
         "events": events[:40],
@@ -305,9 +308,9 @@ def card_html(model: dict) -> str:
         f'<div class="pb"><div class="ph">'
         f'<span class="tag">{p["kind"]}</span>'
         f'<span class="pn">{esc(p["name"][:26])}</span>'
+        f'<span class="pd">{p["draws"]:,} 抽</span>'
         f'<span class="stars">五星 {p["five"]} · 四星 {p["four"]}</span>'
-        f'<span class="pt">{p["time"]}</span>'
-        f'<span class="pd">{p["draws"]:,} 抽</span></div>'
+        f'<span class="pt">{p["time"]}</span></div>'
         + ('<div class="pf">' + "".join(
             f'<div class="fc"><img src="../assets/{f["face"]}"></div>' for f in p["faces"]) + '</div>'
            if p["faces"] else '')
@@ -335,7 +338,7 @@ def card_html(model: dict) -> str:
         "RATE": f"{model['rate']:.2f}",
         "RATIO": f"{model['ratio']:.2f}",
         "STONE_DRAWS": f"{model['stone_draws']:,}",
-        "BAG_TIMES": f"{model['bag_times']:.1f}",
+        "BAG_TIMES": str(int(model['bag_times'])),
         "BAG_FIVE": f"{model['bag_five']:.1f}",
         "COLL_FIVE": str(model['coll_five']),
         "FIVE_KIND": str(model["five"]),
@@ -345,6 +348,7 @@ def card_html(model: dict) -> str:
         "GRID": cells or '<div class="empty">今年还没有五星记录</div>',
         "GRID_N": str(len(model["grid_year"])),
         "GRID_TOTAL": str(model["grid_total"]),
+        "POOL_DRAWS": f"{model['pool_draws']:,}",
         "YEAR": str(model["year"]),
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
         "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
