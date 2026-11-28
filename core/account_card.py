@@ -163,6 +163,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             yg.append({
                 "svt_id": sid, "name": meta.get("name", ""),
                 "cno": cno.get(sid, 0),
+                "got": datetime.fromtimestamp(ts).strftime("%m-%d"),
                 "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
                 "owned": sid in owned_ids,
                 "face": f"face_{sid}.png", "face_url": FACE.format(sid),
