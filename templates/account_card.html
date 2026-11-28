@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<style>
+/* FGOUID 抽卡记录卡 · DARK-CHALDEA FRAME */
+:root{
+  --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
+  --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --text-4:#6C7A90; --num:#E8D3A0;
+  --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-deep:#8A6E1A;
+  --line:#2A3B60;
+  --g10:rgba(201,162,39,.10); --g16:rgba(201,162,39,.16); --g32:rgba(201,162,39,.32);
+  --g48:rgba(201,162,39,.48); --g60:rgba(201,162,39,.60);
+  --pad-x:46px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+  -webkit-font-smoothing:antialiased;color:var(--text-1)}
+.card{width:1080px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
+  box-shadow:0 0 0 1px rgba(227,195,107,.18), 0 22px 60px rgba(0,0,0,.6)}
+.inner{position:relative;padding:40px var(--pad-x) 30px}
+.top-gloss{position:absolute;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 25%,rgba(255,255,255,0) 70%)}
+
+.hd{display:flex;align-items:baseline;justify-content:space-between;gap:20px}
+.eyebrow{font-size:13px;color:var(--text-4);letter-spacing:.22em}
+.eyebrow b{color:var(--gold-mid);font-weight:400}
+h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
+.sub{font-size:14px;color:var(--text-3);margin-top:8px}
+
+.rating{margin-top:26px;padding:22px 26px;border-radius:14px;background:var(--g10);
+  border:1px solid var(--g32);display:flex;align-items:center;gap:26px}
+.rating .tier{font-size:34px;color:var(--gold-hi);letter-spacing:.08em}
+.rating .desc{font-size:14px;color:var(--text-3);margin-top:6px}
+
+.metrics{display:flex;gap:0;margin-top:22px;border-top:1px solid var(--line)}
+.metrics .m{flex:1;padding:18px 0 4px;text-align:center;border-right:1px solid var(--line)}
+.metrics .m:last-child{border-right:0}
+.metrics .m b{display:block;font-weight:400;font-size:32px;color:var(--num);letter-spacing:.01em}
+.metrics .m i{display:block;font-style:normal;font-size:12px;color:var(--text-4);
+  letter-spacing:.14em;margin-top:6px}
+
+.sec-h{display:flex;align-items:center;gap:16px;margin:30px 0 14px}
+.sec-h .bar{width:5px;height:22px;border-radius:2px;
+  background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
+.sec-h .t{font-size:22px;color:var(--gold-hi);letter-spacing:.18em}
+.sec-h .n{font-size:12px;color:var(--text-4);letter-spacing:.14em}
+.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--g48),rgba(201,162,39,0))}
+
+.grid{display:flex;flex-wrap:wrap;gap:8px}
+.cell{position:relative;width:58px;height:58px;border-radius:8px;overflow:hidden;
+  background:var(--slot);box-shadow:inset 0 0 0 1px var(--g48)}
+.cell img{display:block;width:58px;height:58px}
+.cell .np{position:absolute;left:2px;bottom:2px;font-size:10px;color:#fff;
+  background:rgba(8,13,21,.78);padding:0 3px;border-radius:3px;line-height:1.5}
+
+.ev{display:flex;align-items:center;gap:14px;height:34px;border-bottom:1px solid rgba(255,255,255,.04)}
+.ev .t{flex:0 0 92px;font-size:12.5px;color:var(--text-4);font-variant-numeric:tabular-nums}
+.ev .nm{flex:0 0 240px;font-size:14px;color:var(--text-1)}
+.ev .pool{font-size:12px;color:var(--text-3);overflow:hidden;white-space:nowrap}
+.empty{padding:18px 0;font-size:13px;color:var(--text-4)}
+.foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:11.5px;color:var(--text-4);display:flex;justify-content:space-between}
+</style></head><body>
+<div class="card"><div class="inner">
+<div class="top-gloss"></div>
+
+<div class="hd">
+  <div>
+    <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>召 唤 记 录</b></div>
+    <h1>抽卡记录</h1>
+    <div class="sub">{{NAME}}　Lv.{{LV}}　·　好友码 {{FRIEND}}</div>
+  </div>
+</div>
+
+<div class="rating">
+  <div>
+    <div class="tier">{{TIER}}</div>
+    <div class="desc">{{TIER_DESC}}</div>
+  </div>
+</div>
+
+<div class="metrics">
+  <div class="m"><b>{{DRAWS}}</b><i>圣晶石抽数</i></div>
+  <div class="m"><b>{{BAG}}</b><i>福袋抽数</i></div>
+  <div class="m"><b>{{FIVE}}</b><i>五星契约</i></div>
+  <div class="m"><b>{{FOUR}}</b><i>四星契约</i></div>
+  <div class="m"><b>{{AVG}}</b><i>平均出金（抽）</i></div>
+</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">五星收集</div>
+  <div class="line"></div><div class="n">{{FIVE}} 骑</div></div>
+<div class="grid">{{GRID}}</div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">出金历史</div>
+  <div class="line"></div><div class="n">最近记录</div></div>
+{{EVENTS}}
+
+<div class="foot">
+  <span>数据来自游戏登录快照 · 每池记录上限 500 条</span>
+  <span>TYPE-MOON / FGO PROJECT · 非官方插件</span>
+</div>
+</div></div></body></html>
