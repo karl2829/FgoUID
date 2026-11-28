@@ -62,7 +62,24 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .who .kv b{font-weight:400;font-size:17px;color:#FFFFFF;display:block;margin-top:4px}
 
 /* ② 总记录 */
-.sumrow{margin:12px var(--pad-x) 0;display:flex;gap:10px;align-items:stretch}
+.statbox{margin:12px var(--pad-x) 0;border-radius:16px;overflow:hidden;
+  background:linear-gradient(180deg,#1E2F4D,#172540);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.32), 0 2px 14px rgba(0,0,0,.32)}
+.statrow{display:flex;align-items:stretch;padding:16px 8px 14px}
+.statrow .st{flex:1 1 0;min-width:0;text-align:center;padding:0 6px}
+.statrow .st b{display:block;font-weight:400;font-size:30px;color:var(--num);line-height:1.15;white-space:nowrap}
+.statrow .st b s{font-size:14px;color:#B9C7DA;text-decoration:none;margin-left:2px}
+.statrow .st i{display:block;font-style:normal;font-size:12.5px;color:#C9D5E5;margin-top:7px;letter-spacing:.06em}
+.statrow .st u{display:block;text-decoration:none;font-size:11.5px;color:#93A2B6;margin-top:3px}
+.statrow .st.hero b{font-size:38px;color:var(--gold-hi)}
+.statrow .vs{width:1px;background:linear-gradient(180deg,rgba(201,162,39,0),rgba(201,162,39,.45) 50%,rgba(201,162,39,0))}
+.tierline{display:flex;align-items:center;gap:16px;padding:12px 20px 14px;
+  border-top:1px solid rgba(201,162,39,.22);background:rgba(0,0,0,.16)}
+.tierline .t{font-size:27px;color:{{TIER_COLOR}};letter-spacing:.06em;white-space:nowrap}
+.tierline .d{font-size:12.5px;color:#C4D0E0}
+.tierline .bar{margin-left:auto;width:180px;height:6px;border-radius:3px;background:rgba(0,0,0,.4)}
+.tierline .bar i{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,#F8EDCB,#C9A227)}
+.sumrow{display:none}
 .ratecard{flex:0 0 226px;padding:16px 20px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:6px;
   background:linear-gradient(180deg,#2A3E66,#1C2C4C);box-shadow:inset 0 0 0 1px rgba(201,162,39,.55)}
 .ratecard .lb{font-size:12.5px;color:#A9B8CC;letter-spacing:.16em}
@@ -148,19 +165,23 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 
 <div class="sec-h"><div class="bar"></div><div class="t">总记录</div>
   <div class="line"></div><div class="n">ALL TIME</div></div>
-<div class="sumrow">
-  <div class="ratecard">
-    <div class="lb">出货率</div>
-    <div class="v">{{RATE}}<s>%</s></div>
-    <div class="sub">平均 {{AVG}} 抽 / 五星</div>
+<div class="statbox">
+  <div class="statrow">
+    <div class="st hero">
+      <b>{{RATE}}<s>%</s></b>
+      <i>出货率</i>
+      <u>平均 {{AVG}} 抽 / 五星</u>
+    </div>
+    <div class="vs"></div>
+    <div class="st"><b>{{DRAWS}}<s>抽</s></b><i>总抽数</i></div>
+    <div class="vs"></div>
+    <div class="st"><b>{{BAG_TIMES}}<s>次</s></b><i>福袋</i></div>
+    <div class="vs"></div>
+    <div class="st"><b>{{FIVE}}<s>/{{FIVE_KIND}}</s></b><i>五星 / 图鉴</i></div>
+    <div class="vs"></div>
+    <div class="st"><b>{{COLL_FIVE}}<s>个</s></b><i>五星总数</i></div>
   </div>
-  <div class="sum">
-    <div class="m"><b>{{DRAWS}}<s>抽</s></b><i>总抽数</i></div>
-    <div class="m"><b>{{BAG_TIMES}}<s>次</s></b><i>福袋</i></div>
-    <div class="m"><b>{{FIVE}}<s>/{{FIVE_KIND}}</s></b><i>五星 / 图鉴</i></div>
-    <div class="m"><b>{{COLL_FIVE}}<s>个</s></b><i>五星总数</i></div>
-  </div>
-  <div class="tier">
+  <div class="tierline">
     <div class="t">{{TIER}}</div>
     <div class="d">{{TIER_DESC}}</div>
     <div class="bar"><i style="width:{{RATE_W}}%"></i></div>
