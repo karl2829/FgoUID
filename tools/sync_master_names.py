@@ -17,7 +17,7 @@ ATLAS = "https://api.atlasacademy.io/export/CN/{name}.json"
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS item_names(id INTEGER PRIMARY KEY, name TEXT NOT NULL, type TEXT);
 CREATE TABLE IF NOT EXISTS gacha_names(id INTEGER PRIMARY KEY, name TEXT NOT NULL,
-  gacha_type TEXT, started_at INTEGER, ended_at INTEGER);
+  gacha_type TEXT, started_at INTEGER, ended_at INTEGER, featured TEXT);
 """
 
 
@@ -39,9 +39,11 @@ def main() -> int:
         [(int(i["id"]), (i.get("name") or "").strip(), i.get("type") or "") for i in items],
     )
     con.executemany(
-        "INSERT OR REPLACE INTO gacha_names(id, name, gacha_type, started_at, ended_at) VALUES (?,?,?,?,?)",
+        "INSERT OR REPLACE INTO gacha_names(id, name, gacha_type, started_at, ended_at, featured)"
+        " VALUES (?,?,?,?,?,?)",
         [(int(g["id"]), (g.get("name") or "").strip(), g.get("type") or "",
-          int(g.get("startedAt") or 0), int(g.get("endedAt") or 0)) for g in gachas],
+          int(g.get("openedAt") or 0), int(g.get("closedAt") or 0),
+          json.dumps(g.get("featuredSvtIds") or [])) for g in gachas],
     )
     con.commit()
     n_i = con.execute("SELECT COUNT(*) FROM item_names").fetchone()[0]

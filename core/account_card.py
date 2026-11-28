@@ -80,6 +80,11 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             cno = {}
         ce = by_id("SELECT id, name, rarity FROM craft_essences WHERE region='CN'")
         gtype = by_id("SELECT id, name, gacha_type, started_at, ended_at FROM gacha_names")
+        try:
+            featured_map = {int(r[0]): json.loads(r[1] or "[]") for r in con.execute(
+                "SELECT id, featured FROM gacha_names WHERE featured IS NOT NULL AND featured NOT IN ('[]','')")}
+        except sqlite3.Error:
+            featured_map = {}
     finally:
         con.close()
 
@@ -164,6 +169,18 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             if not prev or ts > prev[1]:
                 obtain_pool[sid] = (int(gid), ts)
 
+    # 角色 → 抽过的 UP 卡池（Atlas featuredSvtIds + userGacha.num）
+    feat_pools = defaultdict(list)
+    for gid, feats in featured_map.items():
+        draws_n = gacha_num.get(gid, 0)
+        if not draws_n:
+            continue
+        for sid in feats:
+            try:
+                feat_pools[int(sid)].append((gid, draws_n))
+            except (ValueError, TypeError):
+                continue
+
     year = datetime.now().year
     # 今年新获得（图鉴口径，含已变还的），按实装顺序倒排
     yg = []
@@ -180,7 +197,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 "cno": cno.get(sid, 0),
                 "got": datetime.fromtimestamp(ts).strftime("%m-%d"),
                 "pool_draws": (gacha_num.get(obtain_pool[sid][0], 0)
-                               if sid in obtain_pool else 0),
+                               if sid in obtain_pool
+                               else sum(d for _g, d in feat_pools.get(sid, []))),
                 "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
                 "owned": sid in owned_ids,
                 "face": f"face_{sid}.png", "face_url": FACE.format(sid),
