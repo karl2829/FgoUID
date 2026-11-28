@@ -319,12 +319,33 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
             "time": (datetime.fromtimestamp(max(ts)).strftime("%m-%d") if ts else ""),
             "last_ts": max(ts) if ts else 0,
         })
-    cutoff = time.time() - 60 * 86400
-    pools = [p for p in pools if p["last_ts"] >= cutoff]
-    pools.sort(key=lambda p: (p["kind"] == "常驻", -p["last_ts"]))
-    normal = [p for p in pools if p["kind"] == "常驻"]
-    limited = [p for p in pools if p["kind"] != "常驻"]
-    pools = limited[:9] + normal[:1]
+    if mode == "all":
+        # 全部模式：历史抽数 TOP 10（不含友情池）
+        top = []
+        for gid, draws_n in gacha_num.items():
+            g = gtype.get(gid, {})
+            if g.get("gacha_type") == "friendPoint" or draws_n <= 0:
+                continue
+            nm = (g.get("name") or "").replace("\n", " ").strip()
+            nm = nm or f"未收录卡池 {gid}"
+            top.append({
+                "name": nm,
+                "kind": "福袋" if g.get("gacha_type") == "chargeStone" else (
+                    "常驻" if "剧情" in nm else "限定"),
+                "draws": draws_n, "five": 0, "four": 0, "faces": [], "records": 0,
+                "time": datetime.fromtimestamp(int(g.get("started_at") or 0)).strftime("%Y-%m")
+                        if g.get("started_at") else "",
+                "last_ts": 0,
+            })
+        top.sort(key=lambda x: -x["draws"])
+        pools = top[:10]
+    else:
+        cutoff = time.time() - 60 * 86400
+        pools = [p for p in pools if p["last_ts"] >= cutoff]
+        pools.sort(key=lambda p: (p["kind"] == "常驻", -p["last_ts"]))
+        normal = [p for p in pools if p["kind"] == "常驻"]
+        limited = [p for p in pools if p["kind"] != "常驻"]
+        pools = limited[:9] + normal[:1]
     events.sort(key=lambda e: -e["ts"])
     for e in events:
         e["time"] = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M")
@@ -394,8 +415,8 @@ def card_html(model: dict) -> str:
         f'<span class="tag {"c" if p["kind"] == "常驻" else ("f" if p["kind"] == "福袋" else "")}">{p["kind"]}</span>'
         f'<span class="pn">{esc(p["name"][:26])}</span>'
         f'<span class="pd">{p["draws"]:,} 抽</span>'
-        f'<span class="stars">五星 {p["five"]} · 四星 {p["four"]}</span>'
-        f'<span class="pt">{p["time"]}</span></div>'
+        + (f'<span class="stars">五星 {p["five"]} · 四星 {p["four"]}</span>' if p.get("records") else '')
+        + f'<span class="pt">{p["time"]}</span></div>'
         + ('<div class="pf">' + "".join(
             f'<div class="fc"><img src="../assets/{f["face"]}"></div>' for f in p["faces"]) + '</div>'
            if p["faces"] else '')
@@ -441,6 +462,8 @@ def card_html(model: dict) -> str:
         "YEAR": str(model["year"]),
         "TITLE_YEAR": model.get("title_year", str(model["year"])),
         "GRID_CLASS": "compact" if model.get("mode") == "all" else "",
+        "POOL_TITLE": "历史卡池 TOP 10" if model.get("mode") == "all" else "近期卡池",
+        "POOL_SUB": "BY DRAWS" if model.get("mode") == "all" else "RECENT BANNERS",
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
         "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
         "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",
