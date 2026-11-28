@@ -1,2 +1,5 @@
 __pycache__/
 *.pyc
+
+# 个人数据：只保留汇总档，原始缓存不进仓库
+data/FGOUID/users/*.db
