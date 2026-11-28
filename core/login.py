@@ -46,16 +46,24 @@ def _post(url: str, fields: dict, timeout: int = 20) -> bytes:
 
 
 def _decode(raw: bytes) -> dict:
+    """响应可能被 base64 / gzip / zlib / urlencode 包过，逐层剥。"""
     import base64
+    import gzip
+    import io
     import zlib
 
-    for fn in (None, base64.b64decode, lambda b: base64.b64decode(b + b"=="),
-               lambda b: zlib.decompress(base64.b64decode(b))):
-        try:
-            blob = raw if fn is None else fn(raw)
-            return json.loads(blob.decode("utf-8"))
-        except Exception:
-            continue
+    for _ in range(5):
+        raw = raw.strip()
+        if raw.startswith(b"{"):
+            return json.loads(raw.decode("utf-8"))
+        if raw.startswith(b"\x1f\x8b"):
+            raw = gzip.GzipFile(fileobj=io.BytesIO(raw)).read()
+        elif raw[:1] == b"x":
+            raw = zlib.decompress(raw)
+        elif b"%" in raw:
+            raw = urllib.parse.unquote_to_bytes(raw)
+        else:
+            raw = base64.b64decode(raw, validate=True)
     raise ValueError("响应无法解析")
 
 
@@ -120,13 +128,20 @@ def login_game(access_key: str, uid: str, nickname: str = "") -> dict:
                                               "X-Unity-Version": "2019.4.40f1",
                                               "Content-Type": "application/x-www-form-urlencoded"})
         with _OPENER.open(req, timeout=30) as r:
-            return _decode(r.read())
+            root = _decode(r.read())
+        rows = root.get("response") or []
+        if not rows:
+            raise ValueError(f"空响应：{str(root)[:120]}")
+        row = rows[0]
+        if str(row.get("resCode")) not in ("0", "00"):
+            raise ValueError(f"resCode={row.get('resCode')} {str(row)[:120]}")
+        return row.get("success") or {}
 
     member = game("/rongame_beta/rgfate/60_member/logintomembercenter.php", dict(
         common, t="22360", v="1.0.1", s="1", mac="0", imei="", bundleid="com.bilibili.fatego",
         username=nickname, type="token", rkuid=str(uid), access_token=access_key,
         rksdkid="1", rkchannel="24", version="0"))
-    info = member.get("success") or {}
+    info = member
     if not info.get("rguid"):
         raise ValueError(f"SDK 换游戏账号失败：{str(member)[:120]}")
     for k in ("dateVer", "dataVer"):
@@ -135,7 +150,7 @@ def login_game(access_key: str, uid: str, nickname: str = "") -> dict:
         common, rgsid="1001", rguid=info["rguid"], rgusk=info["rgusk"], idfa="", v="1.0.1",
         mac="0", imei="", type="login", nickname=str(info["rgusk"])[:10], rkchannel="24",
         assetbundleFolder="", userAgent="1", t="20399", s="1", rksdkid="1"))
-    sess = login.get("success") or {}
+    sess = login
     if not sess.get("sguid"):
         raise ValueError(f"游戏登录失败：{str(login)[:120]}")
     st = {"sguid": str(sess["sguid"]), "sgusk": str(sess["sgusk"]),

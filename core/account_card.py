@@ -411,6 +411,8 @@ def card_html(model: dict) -> str:
                 f'<span class="got">{label}</span></div>')
 
     cells = "".join(_cell(g) for g in model["grid_year"])
+    pool_title = "历史卡池 TOP 10" if model.get("mode") == "all" else "近期卡池"
+    pool_sub = "BY DRAWS" if model.get("mode") == "all" else "RECENT BANNERS"
     pool_rows = "".join(
         f'<div class="pb"><div class="ph">'
         f'<span class="tag {"c" if p["kind"] == "常驻" else ("f" if p["kind"] == "福袋" else "")}">{p["kind"]}</span>'
@@ -463,13 +465,17 @@ def card_html(model: dict) -> str:
         "YEAR": str(model["year"]),
         "TITLE_YEAR": model.get("title_year", str(model["year"])),
         "GRID_CLASS": "compact" if model.get("mode") == "all" else "",
-        "POOL_TITLE": "历史卡池 TOP 10" if model.get("mode") == "all" else "近期卡池",
-        "POOL_SUB": "BY DRAWS" if model.get("mode") == "all" else "RECENT BANNERS",
+        "POOL_TITLE": pool_title,
+        "POOL_SUB": pool_sub,
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
         "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
         "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",
         "PUSH_LV": str(model["push"].get("lv", "")) if model.get("push") else "",
-        "POOLS": pool_rows or '<div class="empty">还没有卡池记录</div>',
+        "POOLS": pool_rows,
+        "POOL_SECTION": (
+            f'<div class="sec-h"><div class="bar"></div><div class="t">{pool_title}</div>'
+            f'<div class="line"></div><div class="n">{pool_sub}</div></div>{pool_rows}'
+            if pool_rows else ''),
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
