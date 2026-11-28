@@ -50,7 +50,10 @@ def _con():
 
 def load_payload(path: str | Path) -> dict:
     d = json.load(open(path, encoding="utf-8"))
-    return d["cache"]["replaced"]
+    cache = d.get("cache") or {}
+    rep = cache.get("replaced") or {}
+    rep["__updated__"] = cache.get("updated") or {}
+    return rep
 
 
 def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
@@ -79,6 +82,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         con.close()
 
     ug = rep["userGame"][0]
+    upd = (rep.get("__updated__") or {}).get("userLogin") or rep.get("userLogin") or [{}]
+    login_row = upd[0] if upd else {}
     coll = rep.get("userSvtCollection") or []
     login = ((rep.get("userLogin") or [{}])[0] or {})
     totals = Counter()
@@ -132,8 +137,25 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         })
     grid.sort(key=lambda x: -x["cno"] or -x["svt_id"])   # 按实装顺序倒排（图鉴编号）
     year = datetime.now().year
-    recent = [g for g in grid if datetime.fromtimestamp(g["ts"]).year >= year] if any(
-        g["ts"] for g in grid) else grid
+    # 今年新获得（图鉴口径，含已变还的），按实装顺序倒排
+    yg = []
+    for r in five:
+        try:
+            ts = int(r.get("createdAt") or 0)
+        except (TypeError, ValueError):
+            ts = 0
+        if ts and datetime.fromtimestamp(ts).year >= year:
+            sid = int(r["svtId"])
+            meta = svt.get(sid, {})
+            yg.append({
+                "svt_id": sid, "name": meta.get("name", ""),
+                "cno": cno.get(sid, 0),
+                "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
+                "owned": sid in owned_ids,
+                "face": f"face_{sid}.png", "face_url": FACE.format(sid),
+            })
+    yg.sort(key=lambda x: -x["cno"] or -x["svt_id"])
+    recent = yg or grid
 
     # 单推从者（头部头像）
     push = {}
@@ -190,11 +212,16 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         faces = []
         for r in cards:
             sid = int(r["objectId"])
-            if int(svt.get(sid, {}).get("rarity") or 0) == 5:
-                faces.append({"face": f"face_{sid}.png", "face_url": FACE.format(sid),
-                              "name": svt.get(sid, {}).get("name", "")})
+            meta = svt.get(sid) or {}
+            if not meta:
+                continue
+            faces.append({"face": f"face_{sid}.png", "face_url": FACE.format(sid),
+                          "name": meta.get("name", ""), "rarity": int(meta.get("rarity") or 0)})
+        kind = "福袋" if g.get("gacha_type") == "chargeStone" else (
+            "常驻" if "剧情" in (g.get("name") or "") or "常驻" in (g.get("name") or "") else "限定")
         pools.append({
-            "faces": faces[:20],
+            "kind": kind,
+            "faces": faces[:12],
             "name": g.get("name", f"卡池 {gid}"),
             "draws": gacha_num.get(int(gid), 0),
             "records": len(cards),
@@ -210,6 +237,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
     return {
         "name": ug.get("name", ""),
         "lv": ug.get("lv"),
+        "start": datetime.fromtimestamp(int(ug.get("createdAt") or 0)).strftime("%Y-%m-%d"),
+        "login_days": int(login_row.get("totalLoginCount") or 0),
         "friend_code": ug.get("friendCode", ""),
         "draws": draws,
         "bag_draws": totals["chargeStone"],
@@ -244,10 +273,11 @@ def card_html(model: dict) -> str:
         f'<span class="cnt">×{g["count"]}</span></div>'
         for g in model["grid_year"])
     pool_rows = "".join(
-        f'<div class="pb"><div class="ph"><span class="pn">{esc(p["name"][:30])}</span>'
+        f'<div class="pb"><div class="ph">'
+        f'<span class="tag">{p["kind"]}</span>'
+        f'<span class="pn">{esc(p["name"][:26])}</span>'
         f'<span class="pt">{p["time"]}</span>'
-        f'<span class="pd">{p["draws"]:,} 抽</span>'
-        f'<span class="pc">五星 {p["five"]}</span></div>'
+        f'<span class="pd">{p["draws"]:,} 抽</span></div>'
         + ('<div class="pf">' + "".join(
             f'<div class="fc"><img src="../assets/{f["face"]}"></div>' for f in p["faces"]) + '</div>'
            if p["faces"] else '')
@@ -262,6 +292,8 @@ def card_html(model: dict) -> str:
     for key, val in {
         "NAME": _nick_html(model["name"]),
         "LV": str(model["lv"]),
+        "START": esc(model.get("start", "")),
+        "LOGIN": f"{model.get('login_days', 0):,}",
         "FRIEND": esc(str(model["friend_code"])),
         "DRAWS": f"{model['draws']:,}",
         "BAG": f"{model['bag_draws']:,}",
@@ -303,7 +335,13 @@ async def get_card_png(model: dict, quality: str = "std") -> bytes | None:
 
     from ..card import fetch as card_fetch
 
-    mapping = {g["face"]: g["face_url"] for g in model["grid"]}
+    need = list(model["grid_year"]) + list(model["grid"]) + list(model["pools"])
+    mapping = {g["face"]: g["face_url"] for g in model["grid_year"]}
+    for p in model["pools"]:
+        for f in p["faces"]:
+            mapping[f["face"]] = f["face_url"]
+    if model.get("push"):
+        mapping[model["push"]["face"]] = model["push"]["face_url"]
     images = await asyncio.to_thread(card_fetch.remote_images, mapping, 8)
     png = await render.render_png(html, TEMPLATE.parent, quality=quality,
                                   extra_images=images, bleed=28, margin=8)
