@@ -87,6 +87,10 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .cell img{display:block;width:116px;height:116px}
 .cell .cnt{position:absolute;right:3px;top:3px;font-size:14px;color:#1d2330;
   background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 6px;border-radius:5px;line-height:1.55;z-index:3}
+.grid.compact .cell{width:64px;height:64px;border-radius:8px}
+.grid.compact .cell img{width:64px;height:64px}
+.grid.compact .cell .cnt{font-size:11px;padding:0 4px}
+.grid.compact .cell .got{font-size:10px;line-height:1.5}
 .cell .got{position:absolute;left:0;right:0;bottom:0;font-size:13px;text-align:center;
   color:var(--gold-hi);background:rgba(8,13,21,.78);line-height:1.7;letter-spacing:.02em}
 .hint{margin:6px var(--pad-x) 0;font-size:12.5px;color:#9FAEC2}
@@ -120,7 +124,7 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
     <div class="eyebrow">S U M M O N&nbsp;／&nbsp;<b>ARCHIVE</b></div>
     <div class="name">召唤记录</div>
   </div>
-  <div class="ybadge">{{YEAR}} 记录</div>
+  <div class="ybadge">{{TITLE_YEAR}} 记录</div>
 </div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">御主</div>
@@ -159,10 +163,10 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   </div>
 </div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">{{YEAR}} 记录</div>
-  <div class="line"></div><div class="n">获得 {{GRID_N}} / 图鉴 {{GRID_ALL}}</div></div>
-<div class="grid">{{GRID}}</div>
-<div class="hint">角色对应抽数为估算数据，不一定准确（取该角色 UP 卡池累计抽数）· 全部记录请用 <b>fgo全部抽卡记录</b></div>
+<div class="sec-h"><div class="bar"></div><div class="t">{{TITLE_YEAR}} 记录</div>
+  <div class="line"></div><div class="n">{{GRID_N}} 骑</div></div>
+<div class="grid {{GRID_CLASS}}">{{GRID}}</div>
+<div class="hint"><!--HINT--></div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">近期卡池</div>
   <div class="line"></div><div class="n">RECENT BANNERS</div></div>

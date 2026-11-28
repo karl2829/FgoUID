@@ -59,7 +59,7 @@ def load_payload(path: str | Path) -> dict:
     return rep
 
 
-def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
+def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") -> dict:
     con = _con()
     try:
         def by_id(sql: str) -> dict:
@@ -190,11 +190,14 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             except (ValueError, TypeError):
                 continue
 
+    if mode == "all":
+        year_start, year_end = 0, 10 ** 12
     year = datetime.now().year
     # FGO 新年从者 12-31 开池：本年度 = [上一年 12-31, 本年 12-31)
     # 本年 12-31 开出的是下一年的新年从者，所以不计入本年
-    year_start = datetime(year - 1, 12, 31).timestamp()
-    year_end = datetime(year, 12, 31).timestamp()
+    if mode != "all":
+        year_start = datetime(year - 1, 12, 31).timestamp()
+        year_end = datetime(year, 12, 31).timestamp()
     # 今年新获得（图鉴口径，含已变还的），按实装顺序倒排
     yg = []
     for r in five:
@@ -349,6 +352,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "tier_color": tier_color,
         "grid": grid,
         "grid_year": recent,
+        "mode": mode,
+        "title_year": "全部" if mode == "all" else str(year),
         "year": year,
         "grid_total": len(grid),
         "year_all": year_all,
@@ -416,6 +421,9 @@ def card_html(model: dict) -> str:
         "AVG": f"{model['avg']:.1f}",
         "RATE_W": f"{min(100, max(4, model['ratio'] / 1.6 * 100)):.0f}",
         "RATE": f"{model['rate']:.2f}",
+        "HINT": ("角色对应抽数为估算数据，不一定准确（取该角色 UP 卡池累计抽数）"
+                 if model.get("mode") == "year"
+                 else "全部五星按实装顺序倒序 · 抽数为该角色 UP 卡池累计抽数（估算）"),
         "RATIO": f"{model['ratio']:.2f}",
         "STONE_DRAWS": f"{model['stone_draws']:,}",
         "BAG_TIMES": str(int(model['bag_times'])),
@@ -431,6 +439,8 @@ def card_html(model: dict) -> str:
         "GRID_TOTAL": str(model["grid_total"]),
         "POOL_DRAWS": f"{model['pool_draws']:,}",
         "YEAR": str(model["year"]),
+        "TITLE_YEAR": model.get("title_year", str(model["year"])),
+        "GRID_CLASS": "compact" if model.get("mode") == "all" else "",
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
         "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
         "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",

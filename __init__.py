@@ -732,6 +732,66 @@ def calendar_text(limit: int = 12) -> str:
     return "\n".join(lines)
 
 
+@sv.on_fullmatch(("fgo抽卡记录", "fgo召唤记录"), block=True)
+async def fgo_summon_record(bot: Bot, ev: Event):
+    await _send_summon_card(bot, ev, mode="year")
+
+
+@sv.on_fullmatch(("fgo全部抽卡记录", "fgo全部召唤记录"), block=True)
+async def fgo_summon_record_all(bot: Bot, ev: Event):
+    await _send_summon_card(bot, ev, mode="all")
+
+
+async def _send_summon_card(bot: Bot, ev: Event, mode: str = "year"):
+    from .core import profile_store
+    from .core.account_card import get_card_png, model_for
+
+    uid = profile_store.uid_of(ev.user_id)
+    if not uid:
+        return await bot.send(
+            "还没有你的账号数据。\n"
+            "使用 fgo登录 扫码授权后即可生成抽卡记录卡。")
+    model = userprofile_load(uid, mode)
+    if not model:
+        return await bot.send("账号数据读取失败，请重新 fgo登录。")
+    if not image_on(ev):
+        return await bot.send(_summon_text(model, mode))
+    png = await get_card_png(model, quality_of(ev))
+    if png:
+        return await bot.send(MessageSegment.image(png))
+    await bot.send(_summon_text(model, mode))
+
+
+def userprofile_load(uid, mode: str = "year"):
+    from .core import userprofile
+    from .core.account_card import card_model, load_payload
+    import glob
+    import json as _json
+    import os as _os
+
+    raw = Path(".userdata/raw") / str(uid)
+    top = raw / "toplogin.json"
+    if not top.is_file():
+        return userprofile.load(uid)
+    rep = _json.loads(top.read_text(encoding="utf-8"))
+    hist = {}
+    for f in sorted((raw / "hist").glob("*.json")):
+        rows = _json.loads(f.read_text(encoding="utf-8"))
+        if rows:
+            hist[f.stem] = rows
+    return card_model(rep, hist, mode)
+
+
+def _summon_text(model: dict, mode: str) -> str:
+    head = f"{model['name']} Lv.{model['lv']} · UID {model['friend_code']}"
+    stat = (f"总抽 {model['draws']:,} · 福袋 {model['bag_times']} 次 · "
+            f"五星 {model['five_owned']}/{model['five']} · 出货率 {model['rate']:.2f}%")
+    tail = f"平均 {model['avg']:.1f} 抽/五星 · {model['tier']}"
+    names = "、".join(g["name"] for g in model["grid_year"][:12])
+    title = "全部五星" if mode == "all" else f"{model['year']} 年五星"
+    return f"{head}\n{stat}\n{tail}\n{title}：{names}"
+
+
 @sv.on_fullmatch(("fgo日历", "fgo活动日历"), block=True)
 async def fgo_calendar(bot: Bot, ev: Event):
     try:
