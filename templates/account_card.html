@@ -2,7 +2,7 @@
 <style>
 /* FGOUID 抽卡记录卡 · DARK-CHALDEA FRAME */
 :root{
-  --bg-top:#17243D; --bg-base:#131E33; --bg-bottom:#0C1524;
+  --bg-top:#252E3D; --bg-base:#1C2431; --bg-bottom:#141A24;
   --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --text-4:#6C7A90; --num:#E8D3A0;
   --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-deep:#8A6E1A;
   --line:#2A3B60;
@@ -11,7 +11,7 @@
   --pad-x:46px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+body{padding:36px;background:#10151d;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
   -webkit-font-smoothing:antialiased;color:var(--text-1)}
 .card{width:1080px;border-radius:20px;overflow:hidden;
   background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
@@ -22,11 +22,12 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 
 .hd{display:flex;align-items:center;gap:20px}
 .mst{display:flex;align-items:center;gap:18px}
-.mst-face{width:86px;height:86px;border-radius:14px;overflow:hidden;
-  box-shadow:inset 0 0 0 2px var(--g60), 0 4px 16px rgba(0,0,0,.45)}
-.mst-face img{display:block;width:86px;height:86px}
+.mst-face{width:120px;height:120px;border-radius:16px;overflow:hidden;background:#0F1729;
+  box-shadow:inset 0 0 0 2px var(--g60), 0 6px 20px rgba(0,0,0,.5)}
+.mst-face img{display:block;width:120px;height:120px}
 .mst-info h1{font-size:36px;display:flex;align-items:baseline;gap:12px}
 .mst-info h1 .lv{font-size:17px;color:var(--text-3);letter-spacing:.02em}
+.mst-info h1 .tag{color:var(--gold-hi)}
 .eyebrow{font-size:13px;color:var(--text-4);letter-spacing:.22em}
 .eyebrow b{color:var(--gold-mid);font-weight:400}
 h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
@@ -38,9 +39,9 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
 .rating .desc{font-size:14px;color:var(--text-3);margin-top:6px}
 
 .metrics{display:flex;gap:0;margin-top:22px;border-top:1px solid var(--line)}
-.metrics .m{flex:1;padding:18px 0 4px;text-align:center;border-right:1px solid var(--line)}
+.metrics .m{flex:1;padding:22px 0 8px;text-align:center;border-right:1px solid var(--line)}
 .metrics .m:last-child{border-right:0}
-.metrics .m b{display:block;font-weight:400;font-size:32px;color:var(--num);letter-spacing:.01em}
+.metrics .m b{display:block;font-weight:400;font-size:40px;color:var(--num);letter-spacing:.01em}
 .metrics .m i{display:block;font-style:normal;font-size:12px;color:var(--text-4);
   letter-spacing:.14em;margin-top:6px}
 
@@ -59,11 +60,16 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
   background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 4px;border-radius:3px;
   line-height:1.5;font-weight:400}
 
-.pr{display:flex;align-items:center;gap:14px;height:36px;border-bottom:1px solid rgba(255,255,255,.05)}
-.pr .pn{flex:1 1 auto;min-width:0;font-size:13.5px;color:var(--text-1);overflow:hidden;white-space:nowrap}
-.pr .pd{flex:0 0 92px;text-align:right;font-size:13px;color:var(--num);font-variant-numeric:tabular-nums}
-.pr .pc{flex:0 0 78px;text-align:right;font-size:12px;color:var(--text-4)}
-.pr .pf{flex:0 0 46px;text-align:right;font-size:12px;color:var(--gold-mid)}
+.pb{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.pb .ph{display:flex;align-items:baseline;gap:14px}
+.pb .pn{flex:1 1 auto;min-width:0;font-size:14px;color:var(--text-1);overflow:hidden;white-space:nowrap}
+.pb .pd{flex:0 0 auto;font-size:15px;color:var(--num);font-variant-numeric:tabular-nums}
+.pb .pc{flex:0 0 auto;font-size:12px;color:var(--gold-mid)}
+.pb .pf{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pb .fc{width:46px;height:46px;border-radius:8px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px var(--g48)}
+.pb .fc img{display:block;width:46px;height:46px}
+.pnone{font-size:12px;color:var(--text-4);margin-top:6px}
 .empty{padding:18px 0;font-size:13px;color:var(--text-4)}
 .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
   font-size:11.5px;color:var(--text-4);display:flex;justify-content:space-between}
@@ -77,7 +83,7 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
     <div class="mst-info">
       <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>召 唤 记 录</b></div>
       <h1>{{NAME}}<span class="lv">Lv.{{LV}}</span></h1>
-      <div class="sub">好友码 {{FRIEND}}　·　单推　{{PUSH_NAME}}</div>
+      <div class="sub">好友码 {{FRIEND}}　·　中意　{{PUSH_NAME}}</div>
     </div>
   </div>
 </div>
@@ -102,7 +108,7 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
 <div class="grid">{{GRID}}</div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">最近卡池</div>
-  <div class="line"></div><div class="n">抽数 · 记录 · 五星</div></div>
+  <div class="line"></div><div class="n">抽数与五星</div></div>
 {{POOLS}}
 
 <div class="foot">
