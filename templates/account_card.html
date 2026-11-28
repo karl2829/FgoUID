@@ -43,10 +43,12 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .who{margin:10px var(--pad-x) 0;display:flex;align-items:center;gap:20px;padding:18px 20px;border-radius:16px;
   background:linear-gradient(180deg,#1E2F4D,#182742);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.09), 0 2px 14px rgba(0,0,0,.35)}
-.who .left{flex:1 1 auto;min-width:0}
-.who .favline{font-size:12.5px;color:#93A2B6;letter-spacing:.1em;margin-bottom:10px}
-.who .favline b{color:var(--gold);font-weight:400;font-size:14px;letter-spacing:.02em}
-.who .picrow{display:flex;align-items:center;gap:18px}
+.who .left{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:18px}
+.who .mid{flex:0 0 268px;padding:0 20px;border-left:1px solid rgba(255,255,255,.10);
+  border-right:1px solid rgba(255,255,255,.10);align-self:stretch;
+  display:flex;flex-direction:column;justify-content:center;gap:8px}
+.who .mid .lb{font-size:12px;color:#93A2B6;letter-spacing:.16em}
+.who .mid .nm{font-size:21px;color:var(--gold-hi);line-height:1.3}
 .who .pic{width:96px;height:96px;border-radius:14px;overflow:hidden;flex:0 0 96px;background:var(--slot);
   box-shadow:0 0 0 2px rgba(11,18,32,.72), 0 0 0 3.5px rgba(201,162,39,.62)}
 .who .pic img{display:block;width:96px;height:96px}
@@ -54,36 +56,42 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .who .big-name{font-size:42px;color:var(--gold-hi);line-height:1.05}
 .who .lv{font-size:18px;color:#C6D2E2}
 .who .line2{font-size:14px;color:#C9D5E5;margin-top:9px;letter-spacing:.03em}
-.who .right{flex:0 0 auto;display:flex;flex-direction:column;gap:12px;justify-content:center;
-  padding-left:24px;border-left:1px solid rgba(255,255,255,.10)}
+.who .right{flex:0 0 168px;display:flex;flex-direction:column;gap:12px;justify-content:center;
+  padding-left:4px}
 .who .kv i{font-style:normal;font-size:12px;color:#93A2B6;letter-spacing:.12em;display:block}
 .who .kv b{font-weight:400;font-size:17px;color:#FFFFFF;display:block;margin-top:4px}
 
 /* ② 总记录 */
 .sumrow{margin:12px var(--pad-x) 0;display:flex;gap:10px;align-items:stretch}
+.ratecard{flex:0 0 226px;padding:16px 20px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:6px;
+  background:linear-gradient(180deg,#2A3E66,#1C2C4C);box-shadow:inset 0 0 0 1px rgba(201,162,39,.55)}
+.ratecard .lb{font-size:12.5px;color:#A9B8CC;letter-spacing:.16em}
+.ratecard .v{font-size:46px;color:var(--gold-hi);line-height:1.05}
+.ratecard .v s{font-size:20px;text-decoration:none;color:var(--gold);margin-left:2px}
+.ratecard .sub{font-size:13px;color:#C9D5E5}
 .sum{flex:1 1 auto;display:flex;gap:8px}
-.sum .m{flex:1 1 0;min-width:0;padding:13px 14px;border-radius:14px;
-  background:linear-gradient(180deg,#1E2F4D,#182742);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 2px 12px rgba(0,0,0,.3)}
-.sum .m b{display:block;font-weight:400;font-size:28px;color:var(--num);line-height:1.12;white-space:nowrap}
-.sum .m b s{font-size:14px;color:#9FB0C4;text-decoration:none;margin-left:3px}
-.sum .m i{display:block;font-style:normal;font-size:13px;color:#DCE6F2;margin-top:7px;letter-spacing:.02em}
-.tier{flex:0 0 250px;padding:16px 18px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:8px;
+.sum .m{flex:1 1 0;min-width:0;padding:11px 12px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(180deg,#1B2A45,#16223A);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 2px 10px rgba(0,0,0,.28)}
+.sum .m b{display:block;font-weight:400;font-size:23px;color:#E8DCC0;line-height:1.12;white-space:nowrap}
+.sum .m b s{font-size:12.5px;color:#8FA0B6;text-decoration:none;margin-left:2px}
+.sum .m i{display:block;font-style:normal;font-size:12px;color:#B9C7DA;margin-top:6px;letter-spacing:.02em}
+.tier{flex:0 0 236px;padding:14px 16px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:7px;
   background:linear-gradient(180deg,#22345A,#1A2A46);box-shadow:inset 0 0 0 1px rgba(201,162,39,.5)}
-.tier .t{font-size:33px;color:{{TIER_COLOR}};letter-spacing:.06em;line-height:1.1}
+.tier .t{font-size:31px;color:{{TIER_COLOR}};letter-spacing:.06em;line-height:1.1}
 .tier .d{font-size:12.5px;color:#C4D0E0;line-height:1.45}
 .tier .bar{width:100%;height:6px;border-radius:3px;background:rgba(0,0,0,.35);margin-top:3px}
 .tier .bar i{display:block;height:6px;border-radius:3px;background:linear-gradient(90deg,#F8EDCB,#C9A227)}
 
 /* ③ 年记录 */
-.grid{margin:12px var(--pad-x) 0;display:flex;flex-wrap:wrap;gap:10px}
-.cell{position:relative;width:96px;height:96px;border-radius:12px;overflow:hidden;background:var(--slot);
+.grid{margin:12px var(--pad-x) 0;display:flex;flex-wrap:wrap;gap:8px}
+.cell{position:relative;width:116px;height:116px;border-radius:12px;overflow:hidden;background:var(--slot);
   box-shadow:0 0 0 1px rgba(201,162,39,.4)}
-.cell img{display:block;width:96px;height:96px}
+.cell img{display:block;width:116px;height:116px}
 .cell .cnt{position:absolute;right:3px;top:3px;font-size:14px;color:#1d2330;
   background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 6px;border-radius:5px;line-height:1.55;z-index:3}
-.cell .got{position:absolute;left:0;right:0;bottom:0;font-size:11px;text-align:center;
-  color:#E6ECF5;background:rgba(8,13,21,.66);line-height:1.6}
+.cell .got{position:absolute;left:0;right:0;bottom:0;font-size:13px;text-align:center;
+  color:var(--gold-hi);background:rgba(8,13,21,.78);line-height:1.7;letter-spacing:.02em}
 .yeardraws{margin:10px var(--pad-x) 0;font-size:13px;color:#C9D5E5}
 .yeardraws b{color:var(--num);font-weight:400}
 .hint{margin:6px var(--pad-x) 0;font-size:12.5px;color:#9FAEC2}
@@ -124,14 +132,15 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   <div class="line"></div><div class="n">MASTER</div></div>
 <div class="who">
   <div class="left">
-    <div class="favline">中意从者　<b>{{PUSH_NAME}}</b></div>
-    <div class="picrow">
-      <div class="pic"><img src="{{PUSH_FACE}}"></div>
-      <div>
-        <div class="line1"><span class="big-name">{{NAME}}</span><span class="lv">Lv.{{LV}}</span></div>
-        <div class="line2">好友码 {{FRIEND}}</div>
-      </div>
+    <div class="pic"><img src="{{PUSH_FACE}}"></div>
+    <div class="idwrap">
+      <div class="line1"><span class="big-name">{{NAME}}</span><span class="lv">Lv.{{LV}}</span></div>
+      <div class="line2">UID {{FRIEND}}</div>
     </div>
+  </div>
+  <div class="mid">
+    <div class="lb">中意从者</div>
+    <div class="nm">{{PUSH_NAME}}</div>
   </div>
   <div class="right">
     <div class="kv"><i>启程日</i><b>{{START}}</b></div>
@@ -142,12 +151,16 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 <div class="sec-h"><div class="bar"></div><div class="t">总记录</div>
   <div class="line"></div><div class="n">ALL TIME</div></div>
 <div class="sumrow">
+  <div class="ratecard">
+    <div class="lb">出货率</div>
+    <div class="v">{{RATE}}<s>%</s></div>
+    <div class="sub">平均 {{AVG}} 抽 / 五星</div>
+  </div>
   <div class="sum">
     <div class="m"><b>{{DRAWS}}<s>抽</s></b><i>总抽数</i></div>
     <div class="m"><b>{{BAG_TIMES}}<s>次</s></b><i>福袋</i></div>
-    <div class="m"><b>{{FIVE}}<s>骑</s></b><i>持有五星</i></div>
-    <div class="m"><b>{{COLL_FIVE}}<s>个</s></b><i>累计五星 · 图鉴 {{FIVE_KIND}}</i></div>
-    <div class="m"><b>{{RATE}}<s>%</s></b><i>出货率 · {{AVG}} 抽/五星</i></div>
+    <div class="m"><b>{{FIVE}}<s>/{{FIVE_KIND}}</s></b><i>五星 / 图鉴</i></div>
+    <div class="m"><b>{{COLL_FIVE}}<s>个</s></b><i>五星总数</i></div>
   </div>
   <div class="tier">
     <div class="t">{{TIER}}</div>
@@ -157,10 +170,10 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 </div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">{{YEAR}} 记录</div>
-  <div class="line"></div><div class="n">新获得五星 {{GRID_N}} 骑</div></div>
+  <div class="line"></div><div class="n">获得 {{GRID_N}} / 图鉴 {{GRID_ALL}}</div></div>
 <div class="grid">{{GRID}}</div>
 <div class="yeardraws">已统计卡池合计 <b>{{POOL_DRAWS}}</b> 抽</div>
-<div class="hint">头像下方为该角色所在/UP 卡池的累计抽数，无卡池数据时显示获得日期 · 全部记录请用 <b>fgo全部抽卡记录</b></div>
+<div class="hint">角色对应抽数为估算数据，不一定准确（取该角色 UP 卡池累计抽数）· 全部记录请用 <b>fgo全部抽卡记录</b></div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">近期卡池</div>
   <div class="line"></div><div class="n">RECENT BANNERS</div></div>

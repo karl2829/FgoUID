@@ -11,6 +11,7 @@ import hashlib
 import html as _html
 import json
 import math
+import time
 import re
 import sqlite3
 from collections import Counter, defaultdict
@@ -189,6 +190,9 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             ts = int(r.get("createdAt") or 0)
         except (TypeError, ValueError):
             ts = 0
+        got_n = max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0))
+        if got_n <= 0:
+            continue
         if ts and datetime.fromtimestamp(ts).year >= year:
             sid = int(r["svtId"])
             meta = svt.get(sid, {})
@@ -199,10 +203,24 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 "pool_draws": (gacha_num.get(obtain_pool[sid][0], 0)
                                if sid in obtain_pool
                                else sum(d for _g, d in feat_pools.get(sid, []))),
-                "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
+                "count": got_n,
                 "owned": sid in owned_ids,
                 "face": f"face_{sid}.png", "face_url": FACE.format(sid),
             })
+    # 今年图鉴里出现过的五星（含未获得），用于「获得 X / 图鉴 Y」
+    year_all = 0
+    for r in coll:
+        try:
+            sid = int(r["svtId"])
+        except (TypeError, ValueError):
+            continue
+        meta = svt.get(sid)
+        if not meta or int(meta.get("rarity") or 0) != 5:
+            continue
+        ts = int(r.get("createdAt") or 0)
+        if ts and datetime.fromtimestamp(ts).year >= year:
+            year_all += 1
+
     yg.sort(key=lambda x: -x["cno"] or -x["svt_id"])
     recent = yg or grid
 
@@ -286,7 +304,12 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "time": (datetime.fromtimestamp(max(ts)).strftime("%m-%d") if ts else ""),
             "last_ts": max(ts) if ts else 0,
         })
+    cutoff = time.time() - 60 * 86400
+    pools = [p for p in pools if p["last_ts"] >= cutoff]
     pools.sort(key=lambda p: (p["kind"] == "常驻", -p["last_ts"]))
+    normal = [p for p in pools if p["kind"] == "常驻"]
+    limited = [p for p in pools if p["kind"] != "常驻"]
+    pools = limited[:9] + normal[:1]
     events.sort(key=lambda e: -e["ts"])
     for e in events:
         e["time"] = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M")
@@ -316,6 +339,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "grid_year": recent,
         "year": year,
         "grid_total": len(grid),
+        "year_all": year_all,
         "pool_draws": sum(p["draws"] for p in pools),
 
         "push": push,
@@ -341,7 +365,7 @@ def model_for(uid: int | str) -> dict:
 def card_html(model: dict) -> str:
     esc = _html.escape
     def _cell(g: dict) -> str:
-        label = f'{g["pool_draws"]}抽' if g.get("pool_draws") else g.get("got", "")
+        label = f'{g["pool_draws"]}抽' if g.get("pool_draws") else "未知"
         gone = '' if g.get("owned", True) else '<span class="gone">已变还</span>'
         return (f'<div class="cell"><img src="../assets/{g["face"]}">'
                 f'<span class="cnt">×{g["count"]}</span>{gone}'
@@ -391,6 +415,7 @@ def card_html(model: dict) -> str:
         "TIER_COLOR": model["tier_color"],
         "GRID": cells or '<div class="empty">今年还没有五星记录</div>',
         "GRID_N": str(len(model["grid_year"])),
+        "GRID_ALL": str(model.get("year_all", 0)),
         "GRID_TOTAL": str(model["grid_total"]),
         "POOL_DRAWS": f"{model['pool_draws']:,}",
         "YEAR": str(model["year"]),
