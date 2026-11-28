@@ -20,7 +20,13 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .top-gloss{position:absolute;left:0;right:0;top:0;height:2px;
   background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 25%,rgba(255,255,255,0) 70%)}
 
-.hd{display:flex;align-items:baseline;justify-content:space-between;gap:20px}
+.hd{display:flex;align-items:center;gap:20px}
+.mst{display:flex;align-items:center;gap:18px}
+.mst-face{width:86px;height:86px;border-radius:14px;overflow:hidden;
+  box-shadow:inset 0 0 0 2px var(--g60), 0 4px 16px rgba(0,0,0,.45)}
+.mst-face img{display:block;width:86px;height:86px}
+.mst-info h1{font-size:36px;display:flex;align-items:baseline;gap:12px}
+.mst-info h1 .lv{font-size:17px;color:var(--text-3);letter-spacing:.02em}
 .eyebrow{font-size:13px;color:var(--text-4);letter-spacing:.22em}
 .eyebrow b{color:var(--gold-mid);font-weight:400}
 h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
@@ -49,13 +55,15 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
 .cell{position:relative;width:58px;height:58px;border-radius:8px;overflow:hidden;
   background:var(--slot);box-shadow:inset 0 0 0 1px var(--g48)}
 .cell img{display:block;width:58px;height:58px}
-.cell .np{position:absolute;left:2px;bottom:2px;font-size:10px;color:#fff;
-  background:rgba(8,13,21,.78);padding:0 3px;border-radius:3px;line-height:1.5}
+.cell .cnt{position:absolute;left:2px;top:2px;font-size:10.5px;color:#0b1220;
+  background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 4px;border-radius:3px;
+  line-height:1.5;font-weight:400}
 
-.ev{display:flex;align-items:center;gap:14px;height:34px;border-bottom:1px solid rgba(255,255,255,.04)}
-.ev .t{flex:0 0 92px;font-size:12.5px;color:var(--text-4);font-variant-numeric:tabular-nums}
-.ev .nm{flex:0 0 240px;font-size:14px;color:var(--text-1)}
-.ev .pool{font-size:12px;color:var(--text-3);overflow:hidden;white-space:nowrap}
+.pr{display:flex;align-items:center;gap:14px;height:36px;border-bottom:1px solid rgba(255,255,255,.05)}
+.pr .pn{flex:1 1 auto;min-width:0;font-size:13.5px;color:var(--text-1);overflow:hidden;white-space:nowrap}
+.pr .pd{flex:0 0 92px;text-align:right;font-size:13px;color:var(--num);font-variant-numeric:tabular-nums}
+.pr .pc{flex:0 0 78px;text-align:right;font-size:12px;color:var(--text-4)}
+.pr .pf{flex:0 0 46px;text-align:right;font-size:12px;color:var(--gold-mid)}
 .empty{padding:18px 0;font-size:13px;color:var(--text-4)}
 .foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
   font-size:11.5px;color:var(--text-4);display:flex;justify-content:space-between}
@@ -64,10 +72,13 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
 <div class="top-gloss"></div>
 
 <div class="hd">
-  <div>
-    <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>召 唤 记 录</b></div>
-    <h1>抽卡记录</h1>
-    <div class="sub">{{NAME}}　Lv.{{LV}}　·　好友码 {{FRIEND}}</div>
+  <div class="mst">
+    <div class="mst-face"><img src="{{PUSH_FACE}}"></div>
+    <div class="mst-info">
+      <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>召 唤 记 录</b></div>
+      <h1>{{NAME}}<span class="lv">Lv.{{LV}}</span></h1>
+      <div class="sub">好友码 {{FRIEND}}　·　单推　{{PUSH_NAME}}</div>
+    </div>
   </div>
 </div>
 
@@ -90,9 +101,9 @@ h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
   <div class="line"></div><div class="n">{{FIVE}} 骑</div></div>
 <div class="grid">{{GRID}}</div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">出金历史</div>
-  <div class="line"></div><div class="n">最近记录</div></div>
-{{EVENTS}}
+<div class="sec-h"><div class="bar"></div><div class="t">最近卡池</div>
+  <div class="line"></div><div class="n">抽数 · 记录 · 五星</div></div>
+{{POOLS}}
 
 <div class="foot">
   <span>数据来自游戏登录快照 · 每池记录上限 500 条</span>

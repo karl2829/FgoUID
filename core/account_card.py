@@ -74,30 +74,52 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         totals[t] += int(r["num"])
     draws = totals["stone"] + totals["chargeStone"]
 
+    BEAST = ("beast", "loregrand")
+
+    def playable(r) -> bool:
+        cls = str(svt.get(int(r["svtId"]), {}).get("servant_class") or "").lower()
+        return cls and not any(k in cls for k in BEAST)
+
     def rarity_of(r) -> int:
         try:
             return int(svt.get(int(r["svtId"]), {}).get("rarity") or 0)
         except (TypeError, ValueError):
             return 0
 
-    five = [r for r in coll if rarity_of(r) == 5]
-    four = [r for r in coll if rarity_of(r) == 4]
+    five = [r for r in coll if rarity_of(r) == 5 and playable(r)]
+    four = [r for r in coll if rarity_of(r) == 4 and playable(r)]
     avg = draws / max(len(five), 1)
     tier, desc = _rating(avg)
 
     # 五星网格：限定/常驻简单用是否在常驻卡池近似不了，先按职阶+宝具等级排
     grid = []
     for r in five:
-        meta = svt.get(int(r["svtId"]), {})
+        sid = int(r["svtId"])
+        meta = svt.get(sid, {})
         grid.append({
-            "svt_id": r["svtId"],
+            "svt_id": sid,
             "name": meta.get("name", ""),
             "class": meta.get("servant_class", ""),
+            "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
             "np": int(r.get("treasureDeviceLv1") or 1),
-            "face": f"face_{r['svtId']}.png",
-            "face_url": FACE.format(r["svtId"]),
+            "face": f"face_{sid}.png",
+            "face_url": FACE.format(sid),
         })
-    grid.sort(key=lambda x: (-x["np"], x["name"]))
+    grid.sort(key=lambda x: -x["svt_id"])          # 最新出的优先
+
+    # 单推从者（头部头像）
+    push = {}
+    try:
+        uid = str(ug.get("pushUserSvtId") or ug.get("favoriteUserSvtId") or "")
+        owned = {str(r["id"]): r for r in (rep.get("userSvt") or [])}
+        row = owned.get(uid)
+        if row:
+            sid = int(row["svtId"])
+            meta = svt.get(sid, {})
+            push = {"svt_id": sid, "name": meta.get("name", ""), "lv": int(row.get("lv") or 0),
+                    "face": f"face_{sid}.png", "face_url": FACE.format(sid)}
+    except Exception:
+        push = {}
 
     # 出金历史
     events = []
@@ -125,6 +147,24 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 "kind": kind,
                 "rarity": rarity,
             })
+    gacha_num = {int(r["gachaId"]): int(r["num"]) for r in (rep.get("userGacha") or [])}
+    pools = []
+    for gid, rows in histories.items():
+        g = gtype.get(int(gid), {})
+        cards = [r for r in rows if r.get("giftType") == 1]
+        five_n = 0
+        for r in cards:
+            if int(svt.get(int(r["objectId"]), {}).get("rarity") or 0) == 5:
+                five_n += 1
+        ts = [int(r["createdAt"]) for r in rows]
+        pools.append({
+            "name": g.get("name", f"卡池 {gid}"),
+            "draws": gacha_num.get(int(gid), 0),
+            "records": len(cards),
+            "five": five_n,
+            "time": (datetime.fromtimestamp(min(ts)).strftime("%m-%d") if ts else ""),
+        })
+    pools.sort(key=lambda p: -p["records"])
     events.sort(key=lambda e: -e["ts"])
     for e in events:
         e["time"] = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M")
@@ -141,6 +181,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "tier": tier,
         "tier_desc": desc,
         "grid": grid,
+        "push": push,
+        "pools": pools[:8],
         "events": events[:40],
     }
 
@@ -149,8 +191,14 @@ def card_html(model: dict) -> str:
     esc = _html.escape
     cells = "".join(
         f'<div class="cell"><img src="../assets/{g["face"]}">'
-        + (f'<span class="np">宝具{g["np"]}</span>' if g["np"] > 1 else '') + '</div>'
+        f'<span class="cnt">×{g["count"]}</span></div>'
         for g in model["grid"])
+    pool_rows = "".join(
+        f'<div class="pr"><span class="pn">{esc(p["name"][:26])}</span>'
+        f'<span class="pd">{p["draws"]:,} 抽</span>'
+        f'<span class="pc">{p["records"]} 记录</span>'
+        f'<span class="pf">{"★" * min(p["five"], 5)}{p["five"]}</span></div>'
+        for p in model["pools"])
     rows = "".join(
         f'<div class="ev"><span class="t">{e["time"]}</span>'
         f'<span class="nm">{esc(e["name"])}</span>'
@@ -170,6 +218,10 @@ def card_html(model: dict) -> str:
         "TIER_DESC": esc(model["tier_desc"]),
         "GRID": cells or '<div class="empty">暂无五星记录</div>',
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
+        "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
+        "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",
+        "PUSH_LV": str(model["push"].get("lv", "")) if model.get("push") else "",
+        "POOLS": pool_rows or '<div class="empty">还没有卡池记录</div>',
     }.items():
         html = html.replace("{{%s}}" % key, val)
     left = [m for m in html.split("{{") if "}}" in m and m.split("}}")[0].isupper()]
