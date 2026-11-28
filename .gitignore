@@ -3,3 +3,7 @@ __pycache__/
 
 # 个人数据：只保留汇总档，原始缓存不进仓库
 data/FGOUID/users/*.db
+
+# 个人汇总档不进仓库
+data/FGOUID/users/*
+!data/FGOUID/users/.gitkeep
