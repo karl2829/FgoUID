@@ -812,11 +812,14 @@ async def _wait_scan(ticket: str, timeout: int = 150):
             data = await asyncio.to_thread(fgo_login_core.poll_ticket, ticket)
         except Exception:
             continue
-        body = data.get("data") if isinstance(data.get("data"), dict) else data
-        key = body.get("access_key") or body.get("access_token")
-        if key:
-            return (str(body.get("uid") or ""), str(body.get("uname") or ""), str(key))
-        if str(body.get("status") or "") in ("-1", "2", "expired"):
+        code = str(data.get("code"))
+        if code == "0":
+            body = data.get("data") or {}
+            key = body.get("access_key") or body.get("access_token")
+            if key:
+                return (str(body.get("uid") or ""), str(body.get("uname") or ""), str(key))
+            return None
+        if code == "710001":      # 二维码过期
             return None
     return None
 

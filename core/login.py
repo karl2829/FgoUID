@@ -69,33 +69,39 @@ def _sign(params: dict, key: str) -> dict:
     return params
 
 
+def _sdk(action: str, extra: dict | None = None) -> dict:
+    p = profile()
+    params = {k: str(v) for k, v in p["sdk_base"].items()}
+    params["timestamp"] = str(int(time.time() * 1000))
+    params.update({k: str(v) for k, v in (extra or {}).items()})
+    params["sign"] = _md5("".join(params[k] for k in sorted(params)) + p["sdk_key"])
+    return _decode(_post(f"{SDK_BASE}/api/external/qrcode.login/{action}/v3", params))
+
+
 def issue_qr() -> tuple[str, str]:
     """返回 (ticket, 二维码内容)。"""
-    p = profile()
-    params = {
-        "merchant_id": p["sdk_base"]["merchant_id"], "game_id": p["sdk_base"]["game_id"],
-        "app_id": p["sdk_base"]["app_id"], "server_id": p["sdk_base"]["server_id"],
-        "version": p["sdk_base"]["version"], "sdk_type": p["sdk_base"]["sdk_type"],
-        "action": "create", "type": "web", "state": str(uuid.uuid4()),
-        "ticket": "", "access_key": "", "uid": "", "online": "1", "app_ver": "0",
-    }
-    params = _sign(params, p["sdk_key"])
-    raw = _post(f"{SDK_BASE}/api/createQrCode", params)
-    data = _decode(raw)
-    ticket = str(data.get("ticket") or (data.get("data") or {}).get("ticket") or "")
+    root = _sdk("generate")
+    if str(root.get("code")) != "0":
+        raise ValueError(f"创建二维码失败：{str(root)[:120]}")
+    data = root.get("data") or {}
+    ticket = str(data.get("ticket") or "")
     if not ticket:
-        raise ValueError(f"创建二维码失败：{str(data)[:120]}")
-    return ticket, f"https://game.bilibili.com/sdk/scanH5/?ticket={ticket}&fromNative=b"
+        raise ValueError("创建二维码失败：没有 ticket")
+    redirect = data.get("redirect_url")
+    if redirect:
+        value = redirect + "?" + urllib.parse.urlencode({
+            "ticket": ticket,
+            "fromNative": "biligame://portal/auth/login/qrcode",
+            "id": str(data.get("game_base_id", "")),
+            "st": "0",
+        })
+    else:
+        value = "biligame://portal/auth/login/qrcode?" + ticket
+    return ticket, value
 
 
 def poll_ticket(ticket: str) -> dict:
-    p = profile()
-    params = {"ticket": ticket, "merchant_id": p["sdk_base"]["merchant_id"],
-              "game_id": p["sdk_base"]["game_id"], "app_id": p["sdk_base"]["app_id"],
-              "server_id": p["sdk_base"]["server_id"], "version": p["sdk_base"]["version"],
-              "sdk_type": p["sdk_base"]["sdk_type"], "action": "poll"}
-    params = _sign(params, p["sdk_key"])
-    return _decode(_post(f"{SDK_BASE}/api/getQrCodeStatus", params))
+    return _sdk("status", {"ticket": ticket})
 
 
 def login_game(access_key: str, uid: str, nickname: str = "") -> dict:
