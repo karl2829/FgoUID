@@ -2,15 +2,15 @@
 <style>
 /* FGOUID 召唤记录卡 · SLATE（浅一档的蓝灰） */
 :root{
-  --bg-top:#6D7A90; --bg-base:#5E6A7E; --bg-bottom:#525C6E;
-  --panel:rgba(255,255,255,.10); --panel-2:rgba(255,255,255,.14);
+  --bg-top:#242E3C; --bg-base:#1D2530; --bg-bottom:#171D27;
+  --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.06);
   --text-1:#FBFAF6; --text-2:#B7C2D2; --text-3:#94A1B4; --text-4:#78869A;
   --num:#F0DCA8; --gold-hi:#F7E7B6; --gold:#E9CE83; --gold-mid:#CFA93F;
   --line:rgba(255,255,255,.10);
   --pad-x:46px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+body{padding:34px;background:#12171F;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
   -webkit-font-smoothing:antialiased;color:var(--text-1)}
 .card{width:1080px;border-radius:20px;overflow:hidden;
   background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 50%,var(--bg-bottom) 100%);
@@ -42,9 +42,10 @@ body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   box-shadow:inset 0 0 0 1px var(--line)}
 .sum .m{flex:1;padding:18px 0 14px;text-align:center;border-right:1px solid var(--line)}
 .sum .m:last-child{border-right:0}
-.sum .m b{display:block;font-weight:400;font-size:38px;color:var(--num);letter-spacing:.01em}
-.sum .m i{display:block;font-style:normal;font-size:11.5px;color:var(--text-4);
-  letter-spacing:.16em;margin-top:7px}
+.sum .m b{display:block;font-weight:400;font-size:36px;color:var(--num);letter-spacing:.01em}
+.sum .m b s{font-size:16px;color:var(--text-3);text-decoration:none;margin-left:4px}
+.sum .m i{display:block;font-style:normal;font-size:13px;color:#C9D4E4;
+  letter-spacing:.08em;margin-top:8px}
 
 /* 评分 */
 .tier{margin-top:16px;padding:18px 24px;border-radius:14px;background:var(--panel-2);
@@ -66,7 +67,7 @@ body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 /* 五星网格 */
 .grid{display:flex;flex-wrap:wrap;gap:8px}
 .cell{position:relative;width:74px;height:74px;border-radius:10px;overflow:hidden;
-  background:#3A4354;box-shadow:inset 0 0 0 1px rgba(233,206,131,.32)}
+  background:#232C3A;box-shadow:inset 0 0 0 1px rgba(233,206,131,.32)}
 .cell img{display:block;width:74px;height:74px}
 .cell .cnt{position:absolute;left:auto;right:3px;top:3px;font-size:11px;color:#1d2330;
   z-index:3;
@@ -98,7 +99,7 @@ body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 <div class="who">
   <div class="left">
     <div class="nick">{{NAME}}<span class="lv">Lv.{{LV}}</span></div>
-    <div class="meta">好友码 {{FRIEND}}　·　{{YEAR}} 年五星 {{GRID_N}} / {{GRID_TOTAL}}</div>
+    <div class="meta">好友码 {{FRIEND}}　·　{{YEAR}} 年新获得五星 {{GRID_N}} 骑</div>
   </div>
   <div class="fav">
     <div class="lb">中意从者</div>
@@ -107,11 +108,11 @@ body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 </div>
 
 <div class="sum">
-  <div class="m"><b>{{DRAWS}}</b><i>圣晶石抽数</i></div>
-  <div class="m"><b>{{BAG}}</b><i>福袋抽数</i></div>
-  <div class="m"><b>{{FIVE}}</b><i>五星契约</i></div>
-  <div class="m"><b>{{FOUR}}</b><i>四星契约</i></div>
-  <div class="m"><b>{{AVG}}</b><i>平均出金</i></div>
+  <div class="m"><b>{{DRAWS}}<s>抽</s></b><i>圣晶石池累计</i></div>
+  <div class="m"><b>{{BAG}}<s>抽</s></b><i>福袋池累计</i></div>
+  <div class="m"><b>{{FIVE}}<s>骑</s></b><i>持有五星</i></div>
+  <div class="m"><b>{{FIVE_COLL}}<s>骑</s></b><i>图鉴五星</i></div>
+  <div class="m"><b>{{AVG}}<s>抽</s></b><i>平均每五星</i></div>
 </div>
 
 <div class="tier">
@@ -123,7 +124,7 @@ body{padding:34px;background:#454D5C;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 <div class="sec-h"><div class="bar"></div><div class="t">五星记录</div>
   <div class="line"></div><div class="n">{{YEAR}} 年 · {{GRID_N}} 骑</div></div>
 <div class="grid">{{GRID}}</div>
-<div class="hint">按实装顺序倒序 · 角标为累计获得数 · 全部记录请用 <b>fgo全部抽卡记录</b></div>
+<div class="hint">只显示当前持有的五星，按实装顺序倒序 · 角标为累计获得次数（≥2 才显示）· 全部记录请用 <b>fgo全部抽卡记录</b></div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">近期卡池</div>
   <div class="line"></div><div class="n">抽数 · 五星</div></div>

@@ -105,9 +105,19 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
     tier, desc, tier_color = _rating(avg)
 
     # 五星网格：限定/常驻简单用是否在常驻卡池近似不了，先按职阶+宝具等级排
+    owned_ids = {int(r["svtId"]) for r in (rep.get("userSvt") or [])}
+    coll_by_id = {}
+    for r in coll:
+        try:
+            coll_by_id[int(r["svtId"])] = r
+        except (TypeError, ValueError):
+            continue
+
     grid = []
     for r in five:
         sid = int(r["svtId"])
+        if sid not in owned_ids:          # 只展示当前持有的
+            continue
         meta = svt.get(sid, {})
         grid.append({
             "svt_id": sid,
@@ -204,6 +214,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "draws": draws,
         "bag_draws": totals["chargeStone"],
         "five": len(five),
+        "five_owned": len(grid),
         "four": len(four),
         "avg": avg,
         "tier": tier,
@@ -254,7 +265,8 @@ def card_html(model: dict) -> str:
         "FRIEND": esc(str(model["friend_code"])),
         "DRAWS": f"{model['draws']:,}",
         "BAG": f"{model['bag_draws']:,}",
-        "FIVE": str(model["five"]),
+        "FIVE": str(model["five_owned"]),
+        "FIVE_COLL": str(model["five"]),
         "FOUR": str(model["four"]),
         "AVG": f"{model['avg']:.1f}",
         "RATE_W": f"{min(100, max(6, 3000 / max(model['avg'], 1))):.0f}",
