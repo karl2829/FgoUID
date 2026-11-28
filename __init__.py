@@ -736,6 +736,17 @@ def calendar_text(limit: int = 12) -> str:
 # ---------- 个人数据：扫码登录 ----------
 _LOGIN_LOCK: dict[str, float] = {}
 _LOGIN_TASKS: set[str] = set()
+# 全局同步闸门：同一时刻只允许一个账号在同步（616 个卡池的请求 + 内存）
+_SYNC_LOCK: asyncio.Lock | None = None
+_SYNC_QUEUE = 0
+QR_PENDING_LIMIT = 3          # 同时等待扫码的人数上限
+
+
+def _sync_lock() -> asyncio.Lock:
+    global _SYNC_LOCK
+    if _SYNC_LOCK is None:
+        _SYNC_LOCK = asyncio.Lock()
+    return _SYNC_LOCK
 
 
 @sv.on_fullmatch(("fgo登录", "fgo绑定", "fgo授权"), block=True)
@@ -753,6 +764,8 @@ async def fgo_login(bot: Bot, ev: Event):
         return await bot.send("上一次登录还没结束，稍等一下")
     if now - _LOGIN_LOCK.get(qq, 0) < 600:
         return await bot.send("10 分钟内已经登录过，请稍后再试")
+    if len(_LOGIN_TASKS) >= QR_PENDING_LIMIT:
+        return await bot.send(f"现在有 {len(_LOGIN_TASKS)} 个账号在登录中，请稍后再试")
 
     try:
         ticket, url = await asyncio.to_thread(fgo_login_core.issue_qr)
@@ -775,21 +788,37 @@ async def fgo_login(bot: Bot, ev: Event):
         uid, nickname, access_key = access_key
         await bot.send("授权成功，正在登录游戏…")
         sess = await asyncio.to_thread(fgo_login_core.login_game, access_key, uid, nickname)
-        await bot.send("登录成功，开始同步抽卡数据（约 3~8 分钟，完成后会发卡片）")
+        global _SYNC_QUEUE
+        lock = _sync_lock()
+        queued = lock.locked()
+        if queued:
+            pos = _SYNC_QUEUE + 1
+            await bot.send(f"登录成功。当前有账号正在同步，你排第 {pos} 位，"
+                           f"预计等待 {pos * 6} 分钟左右，轮到你我会直接发卡片")
+        else:
+            await bot.send("登录成功，开始同步抽卡数据（约 3~8 分钟，完成后会发卡片）")
+        _SYNC_QUEUE += 1
+        await lock.acquire()
+        _SYNC_QUEUE = max(_SYNC_QUEUE - 1, 0)
+        try:
+            if queued:
+                await bot.send("轮到你了，开始同步…")
 
-        async def _prog(done: int, total: int, got: int):
-            if done in (total,) or done % 150 == 0:
-                logger.info(f"[FGOUID] 同步进度 {done}/{total}，已取 {got} 个卡池")
+            async def _prog(done: int, total: int, got: int):
+                if done in (total,) or done % 150 == 0:
+                    logger.info(f"[FGOUID] 同步进度 {done}/{total}，已取 {got} 个卡池")
 
-        rep, histories = await fgo_login_core.fetch_all(sess, progress=_prog)
-        model = card_model(rep, histories, "year")
-        fgo_uid = int((rep.get("userGame") or [{}])[0].get("userId") or sess["sguid"])
-        userprofile.save(fgo_uid, model, {"pools": len(histories)})
-        profile_store.bind(qq, fgo_uid)
-        await bot.send(f"同步完成：{model['five_owned']} 骑五星 · 导出 {get_year_span(model)}")
-        card = await get_card_png(model, quality_of(ev))
-        if card:
-            await bot.send(MessageSegment.image(card))
+            rep, histories = await fgo_login_core.fetch_all(sess, progress=_prog)
+            model = card_model(rep, histories, "year")
+            fgo_uid = int((rep.get("userGame") or [{}])[0].get("userId") or sess["sguid"])
+            userprofile.save(fgo_uid, model, {"pools": len(histories)})
+            profile_store.bind(qq, fgo_uid)
+            await bot.send(f"同步完成：{model['five_owned']} 骑五星 · 导出 {get_year_span(model)}")
+            card = await get_card_png(model, quality_of(ev))
+            if card:
+                await bot.send(MessageSegment.image(card))
+        finally:
+            lock.release()
     except Exception as e:
         logger.warning(f"[FGOUID] 登录流程失败：{e}")
         await bot.send("登录过程中出错了，请稍后重试")
