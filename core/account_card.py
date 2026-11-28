@@ -115,11 +115,15 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "name": meta.get("name", ""),
             "class": meta.get("servant_class", ""),
             "count": max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1),
+            "ts": int(r.get("createdAt") or 0),
             "np": int(r.get("treasureDeviceLv1") or 1),
             "face": f"face_{sid}.png",
             "face_url": FACE.format(sid),
         })
     grid.sort(key=lambda x: -x["cno"] or -x["svt_id"])   # 按实装顺序倒排（图鉴编号）
+    year = datetime.now().year
+    recent = [g for g in grid if datetime.fromtimestamp(g["ts"]).year >= year] if any(
+        g["ts"] for g in grid) else grid
 
     # 单推从者（头部头像）
     push = {}
@@ -205,6 +209,9 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "tier": tier,
         "tier_desc": desc,
         "grid": grid,
+        "grid_year": recent,
+        "year": year,
+        "grid_total": len(grid),
         "push": push,
         "pools": pools[:10],
         "events": events[:40],
@@ -212,12 +219,10 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
 
 
 def _nick_html(name: str) -> str:
-    """游戏昵称里 [xxx] 是金色公会/标签前缀。"""
+    """游戏昵称里 [xxx] 是颜色标记（如 [g] 金色），不显示，只影响颜色。"""
     esc = _html.escape
-    m = re.match(r"^(\[[^\]]{1,6}\])(.*)$", name or "")
-    if not m:
-        return esc(name or "")
-    return f'<span class="tag">{esc(m.group(1))}</span>{esc(m.group(2))}'
+    m = re.match(r"^\[[a-zA-Z]\](.*)$", name or "")
+    return esc(m.group(1) if m else (name or ""))
 
 
 def card_html(model: dict) -> str:
@@ -225,14 +230,14 @@ def card_html(model: dict) -> str:
     cells = "".join(
         f'<div class="cell"><img src="../assets/{g["face"]}">'
         f'<span class="cnt">×{g["count"]}</span></div>'
-        for g in model["grid"])
+        for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph"><span class="pn">{esc(p["name"][:30])}</span>'
         f'<span class="pd">{p["draws"]:,} 抽</span>'
         f'<span class="pc">五星 {p["five"]}</span></div>'
         + ('<div class="pf">' + "".join(
             f'<div class="fc"><img src="../assets/{f["face"]}"></div>' for f in p["faces"]) + '</div>'
-           if p["faces"] else '<div class="pnone">该池暂无五星记录</div>')
+           if p["faces"] else '')
         + '</div>'
         for p in model["pools"])
     rows = "".join(
@@ -250,9 +255,13 @@ def card_html(model: dict) -> str:
         "FIVE": str(model["five"]),
         "FOUR": str(model["four"]),
         "AVG": f"{model['avg']:.1f}",
+        "RATE_W": f"{min(100, max(6, 3000 / max(model['avg'], 1))):.0f}",
         "TIER": esc(model["tier"]),
         "TIER_DESC": esc(model["tier_desc"]),
-        "GRID": cells or '<div class="empty">暂无五星记录</div>',
+        "GRID": cells or '<div class="empty">今年还没有五星记录</div>',
+        "GRID_N": str(len(model["grid_year"])),
+        "GRID_TOTAL": str(model["grid_total"]),
+        "YEAR": str(model["year"]),
         "EVENTS": rows or '<div class="empty">还没有出金记录</div>',
         "PUSH_FACE": f'../assets/{model["push"]["face"]}' if model.get("push") else "",
         "PUSH_NAME": esc(model["push"].get("name", "")) if model.get("push") else "",

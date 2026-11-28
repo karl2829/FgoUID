@@ -1,114 +1,131 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
 <style>
-/* FGOUID 抽卡记录卡 · DARK-CHALDEA FRAME */
+/* FGOUID 召唤记录卡 · SLATE（浅一档的蓝灰） */
 :root{
-  --bg-top:#252E3D; --bg-base:#1C2431; --bg-bottom:#141A24;
-  --text-1:#F2EDE3; --text-2:#A9B6CC; --text-3:#8B98AE; --text-4:#6C7A90; --num:#E8D3A0;
-  --gold-hi:#F5E3AE; --gold:#E3C36B; --gold-mid:#C9A227; --gold-deep:#8A6E1A;
-  --line:#2A3B60;
-  --g10:rgba(201,162,39,.10); --g16:rgba(201,162,39,.16); --g32:rgba(201,162,39,.32);
-  --g48:rgba(201,162,39,.48); --g60:rgba(201,162,39,.60);
+  --bg-top:#3B4557; --bg-base:#333C4B; --bg-bottom:#2A323E;
+  --panel:rgba(255,255,255,.045); --panel-2:rgba(255,255,255,.07);
+  --text-1:#F4F0E8; --text-2:#B7C2D2; --text-3:#94A1B4; --text-4:#78869A;
+  --num:#F0DCA8; --gold-hi:#F7E7B6; --gold:#E9CE83; --gold-mid:#CFA93F;
+  --line:rgba(255,255,255,.10);
   --pad-x:46px;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{padding:36px;background:#10151d;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
+body{padding:34px;background:#232A35;font-family:"WenQuanYi Zen Hei","WenQuanYi Micro Hei",sans-serif;
   -webkit-font-smoothing:antialiased;color:var(--text-1)}
 .card{width:1080px;border-radius:20px;overflow:hidden;
-  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 46%,var(--bg-bottom) 100%);
-  box-shadow:0 0 0 1px rgba(227,195,107,.18), 0 22px 60px rgba(0,0,0,.6)}
-.inner{position:relative;padding:40px var(--pad-x) 30px}
-.top-gloss{position:absolute;left:0;right:0;top:0;height:2px;
-  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5) 25%,rgba(255,255,255,0) 70%)}
+  background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg-base) 50%,var(--bg-bottom) 100%);
+  box-shadow:0 0 0 1px rgba(255,255,255,.07), 0 24px 60px rgba(0,0,0,.55)}
+.inner{position:relative;padding:34px var(--pad-x) 26px}
+.top-gloss{position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.55) 30%,rgba(255,255,255,0) 75%)}
 
-.hd{display:flex;align-items:center;gap:20px}
-.mst{display:flex;align-items:center;gap:18px}
-.mst-face{width:120px;height:120px;border-radius:16px;overflow:hidden;background:#0F1729;
-  box-shadow:inset 0 0 0 2px var(--g60), 0 6px 20px rgba(0,0,0,.5)}
-.mst-face img{display:block;width:120px;height:120px}
-.mst-info h1{font-size:36px;display:flex;align-items:baseline;gap:12px}
-.mst-info h1 .lv{font-size:17px;color:var(--text-3);letter-spacing:.02em}
-.mst-info h1 .tag{color:var(--gold-hi)}
-.eyebrow{font-size:13px;color:var(--text-4);letter-spacing:.22em}
-.eyebrow b{color:var(--gold-mid);font-weight:400}
-h1{font-size:38px;line-height:1.15;margin-top:10px;letter-spacing:.05em}
-.sub{font-size:14px;color:var(--text-3);margin-top:8px}
+/* 标题 */
+.title{display:flex;align-items:baseline;gap:14px}
+.title h0{font-size:26px;color:var(--gold-hi);letter-spacing:.34em}
+.title .en{font-size:11px;color:var(--text-4);letter-spacing:.28em}
 
-.rating{margin-top:26px;padding:22px 26px;border-radius:14px;background:var(--g10);
-  border:1px solid var(--g32);display:flex;align-items:center;gap:26px}
-.rating .tier{font-size:34px;color:var(--gold-hi);letter-spacing:.08em}
-.rating .desc{font-size:14px;color:var(--text-3);margin-top:6px}
+/* 身份区 */
+.who{display:flex;align-items:center;gap:22px;margin-top:20px}
+.who .left{flex:1 1 auto;min-width:0}
+.nick{font-size:52px;line-height:1.08;letter-spacing:.02em;color:var(--gold-hi);
+  text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.nick .lv{font-size:19px;color:var(--text-3);margin-left:14px;letter-spacing:.03em}
+.meta{font-size:13px;color:var(--text-3);margin-top:9px;letter-spacing:.04em}
+.fav{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.fav .lb{font-size:12px;color:var(--text-3);letter-spacing:.14em;line-height:1.4}
+.fav .pic{width:76px;height:76px;border-radius:12px;overflow:hidden;background:#222A36;
+  box-shadow:inset 0 0 0 2px rgba(233,206,131,.55), 0 6px 18px rgba(0,0,0,.4)}
+.fav .pic img{display:block;width:76px;height:76px}
 
-.metrics{display:flex;gap:0;margin-top:22px;border-top:1px solid var(--line)}
-.metrics .m{flex:1;padding:22px 0 8px;text-align:center;border-right:1px solid var(--line)}
-.metrics .m:last-child{border-right:0}
-.metrics .m b{display:block;font-weight:400;font-size:40px;color:var(--num);letter-spacing:.01em}
-.metrics .m i{display:block;font-style:normal;font-size:12px;color:var(--text-4);
-  letter-spacing:.14em;margin-top:6px}
+/* 汇总 */
+.sum{display:flex;margin-top:22px;border-radius:14px;background:var(--panel);
+  box-shadow:inset 0 0 0 1px var(--line)}
+.sum .m{flex:1;padding:18px 0 14px;text-align:center;border-right:1px solid var(--line)}
+.sum .m:last-child{border-right:0}
+.sum .m b{display:block;font-weight:400;font-size:38px;color:var(--num);letter-spacing:.01em}
+.sum .m i{display:block;font-style:normal;font-size:11.5px;color:var(--text-4);
+  letter-spacing:.16em;margin-top:7px}
 
-.sec-h{display:flex;align-items:center;gap:16px;margin:30px 0 14px}
-.sec-h .bar{width:5px;height:22px;border-radius:2px;
-  background:linear-gradient(180deg,#F8EDCB,#C9A227 52%,#8A6E1A)}
-.sec-h .t{font-size:22px;color:var(--gold-hi);letter-spacing:.18em}
-.sec-h .n{font-size:12px;color:var(--text-4);letter-spacing:.14em}
-.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,var(--g48),rgba(201,162,39,0))}
+/* 评分 */
+.tier{margin-top:16px;padding:18px 24px;border-radius:14px;background:var(--panel-2);
+  box-shadow:inset 0 0 0 1px rgba(233,206,131,.22);display:flex;align-items:center;gap:20px}
+.tier .t{font-size:30px;color:var(--gold-hi);letter-spacing:.06em;flex:0 0 auto}
+.tier .d{font-size:13.5px;color:var(--text-2)}
+.tier .bar{margin-left:auto;width:210px;height:6px;border-radius:3px;background:rgba(0,0,0,.28)}
+.tier .bar i{display:block;height:6px;border-radius:3px;
+  background:linear-gradient(90deg,#F7E7B6,#CFA93F)}
 
+/* 分区标题 */
+.sec-h{display:flex;align-items:center;gap:14px;margin:26px 0 12px}
+.sec-h .bar{width:4px;height:19px;border-radius:2px;
+  background:linear-gradient(180deg,#FBF1D2,#CFA93F 55%,#8A6E1A)}
+.sec-h .t{font-size:19px;color:var(--gold-hi);letter-spacing:.16em}
+.sec-h .line{flex:1;height:1px;background:linear-gradient(90deg,rgba(233,206,131,.42),rgba(233,206,131,0))}
+.sec-h .n{font-size:11.5px;color:var(--text-4);letter-spacing:.1em}
+
+/* 五星网格 */
 .grid{display:flex;flex-wrap:wrap;gap:8px}
 .cell{position:relative;width:58px;height:58px;border-radius:8px;overflow:hidden;
-  background:var(--slot);box-shadow:inset 0 0 0 1px var(--g48)}
+  background:#222A36;box-shadow:inset 0 0 0 1px rgba(233,206,131,.32)}
 .cell img{display:block;width:58px;height:58px}
-.cell .cnt{position:absolute;left:2px;top:2px;font-size:10.5px;color:#0b1220;
-  background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 4px;border-radius:3px;
-  line-height:1.5;font-weight:400}
+.cell .c{position:absolute;left:2px;top:2px;font-size:10.5px;color:#1d2330;
+  background:linear-gradient(180deg,#FBF1D2,#CFA93F);padding:0 4px;border-radius:3px;line-height:1.5}
+.hint{margin-top:10px;font-size:11.5px;color:var(--text-4);letter-spacing:.04em}
+.hint b{color:var(--gold);font-weight:400}
 
-.pb{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+/* 卡池 */
+.pb{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07)}
 .pb .ph{display:flex;align-items:baseline;gap:14px}
-.pb .pn{flex:1 1 auto;min-width:0;font-size:14px;color:var(--text-1);overflow:hidden;white-space:nowrap}
-.pb .pd{flex:0 0 auto;font-size:15px;color:var(--num);font-variant-numeric:tabular-nums}
-.pb .pc{flex:0 0 auto;font-size:12px;color:var(--gold-mid)}
+.pb .pn{flex:1 1 auto;min-width:0;font-size:13.5px;color:var(--text-1);overflow:hidden;white-space:nowrap}
+.pb .pt{font-size:11.5px;color:var(--text-4);font-variant-numeric:tabular-nums}
+.pb .pd{font-size:14.5px;color:var(--num);font-variant-numeric:tabular-nums}
+.pb .pc{font-size:11.5px;color:var(--gold-mid)}
 .pb .pf{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.pb .fc{width:46px;height:46px;border-radius:8px;overflow:hidden;
-  box-shadow:inset 0 0 0 1px var(--g48)}
-.pb .fc img{display:block;width:46px;height:46px}
-.pnone{font-size:12px;color:var(--text-4);margin-top:6px}
-.empty{padding:18px 0;font-size:13px;color:var(--text-4)}
-.foot{margin-top:26px;padding-top:14px;border-top:1px solid var(--line);
-  font-size:11.5px;color:var(--text-4);display:flex;justify-content:space-between}
+.pb .fc{width:44px;height:44px;border-radius:8px;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(233,206,131,.34)}
+.pb .fc img{display:block;width:44px;height:44px}
+.pnone{font-size:11.5px;color:var(--text-4);margin-top:6px}
+.empty{padding:16px 0;font-size:13px;color:var(--text-4)}
+.foot{margin-top:22px;padding-top:12px;border-top:1px solid var(--line);
+  font-size:11px;color:var(--text-4);display:flex;justify-content:space-between}
 </style></head><body>
 <div class="card"><div class="inner">
 <div class="top-gloss"></div>
 
-<div class="hd">
-  <div class="mst">
-    <div class="mst-face"><img src="{{PUSH_FACE}}"></div>
-    <div class="mst-info">
-      <div class="eyebrow">F G O U I D&nbsp;&nbsp;／&nbsp;&nbsp;<b>召 唤 记 录</b></div>
-      <h1>{{NAME}}<span class="lv">Lv.{{LV}}</span></h1>
-      <div class="sub">好友码 {{FRIEND}}　·　中意　{{PUSH_NAME}}</div>
-    </div>
+<div class="title"><h0>召唤记录</h0><div class="en">SUMMON&nbsp;ARCHIVE</div></div>
+
+<div class="who">
+  <div class="left">
+    <div class="nick">{{NAME}}<span class="lv">Lv.{{LV}}</span></div>
+    <div class="meta">好友码 {{FRIEND}}　·　{{YEAR}} 年五星 {{GRID_N}} / {{GRID_TOTAL}}</div>
+  </div>
+  <div class="fav">
+    <div class="lb">中意从者</div>
+    <div class="pic"><img src="{{PUSH_FACE}}"></div>
   </div>
 </div>
 
-<div class="rating">
-  <div>
-    <div class="tier">{{TIER}}</div>
-    <div class="desc">{{TIER_DESC}}</div>
-  </div>
-</div>
-
-<div class="metrics">
+<div class="sum">
   <div class="m"><b>{{DRAWS}}</b><i>圣晶石抽数</i></div>
   <div class="m"><b>{{BAG}}</b><i>福袋抽数</i></div>
   <div class="m"><b>{{FIVE}}</b><i>五星契约</i></div>
   <div class="m"><b>{{FOUR}}</b><i>四星契约</i></div>
-  <div class="m"><b>{{AVG}}</b><i>平均出金（抽）</i></div>
+  <div class="m"><b>{{AVG}}</b><i>平均出金</i></div>
 </div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">五星收集</div>
-  <div class="line"></div><div class="n">{{FIVE}} 骑</div></div>
-<div class="grid">{{GRID}}</div>
+<div class="tier">
+  <div class="t">{{TIER}}</div>
+  <div class="d">{{TIER_DESC}}</div>
+  <div class="bar"><i style="width:{{RATE_W}}%"></i></div>
+</div>
 
-<div class="sec-h"><div class="bar"></div><div class="t">最近卡池</div>
-  <div class="line"></div><div class="n">抽数与五星</div></div>
+<div class="sec-h"><div class="bar"></div><div class="t">五星记录</div>
+  <div class="line"></div><div class="n">{{YEAR}} 年 · {{GRID_N}} 骑</div></div>
+<div class="grid">{{GRID}}</div>
+<div class="hint">按实装顺序倒序 · 角标为累计获得数 · 全部记录请用 <b>fgo全部抽卡记录</b></div>
+
+<div class="sec-h"><div class="bar"></div><div class="t">近期卡池</div>
+  <div class="line"></div><div class="n">抽数 · 五星</div></div>
 {{POOLS}}
 
 <div class="foot">
