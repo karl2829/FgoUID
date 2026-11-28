@@ -25,21 +25,21 @@ FACE = "https://static.atlasacademy.io/CN/Faces/f_{}0.png"
 
 # 欧非评级（FGO 化）
 TIERS = (
-    (50, "冠位欧皇", "冠位指定级别的运气，人理都在为你让路。"),
-    (70, "异闻带欧皇", "在错误的概率里活成了正确的样子。"),
-    (90, "迦勒底欧皇", "被抑止力眷顾的御主。"),
-    (110, "人理守护者", "标准出率，稳如人理定础。"),
-    (150, "平稳保底", "不欧不非，圣晶石按计划燃烧。"),
-    (200, "迦勒底非酋", "每次出金都要先打一场圣杯战争。"),
-    (10**9, "终局非酋", "抽卡记录已被编入异闻带。"),
+    (50, "冠位欧皇", "冠位指定级别的运气，人理都在为你让路。", "#FFE9A8"),
+    (70, "异闻带欧皇", "在错误的概率里活成了正确的样子。", "#F7E7B6"),
+    (90, "迦勒底欧皇", "被抑止力眷顾的御主。", "#EFD58C"),
+    (110, "人理守护者", "标准出率，稳如人理定础。", "#D8E3F0"),
+    (150, "平稳保底", "不欧不非，圣晶石按计划燃烧。", "#B7C2D2"),
+    (200, "迦勒底非酋", "每次出金都要先打一场圣杯战争。", "#F0A87C"),
+    (10**9, "终局非酋", "抽卡记录已被编入异闻带。", "#EE8A8A"),
 )
 
 
-def _rating(avg: float) -> tuple[str, str]:
-    for limit, name, desc in TIERS:
+def _rating(avg: float) -> tuple[str, str, str]:
+    for limit, name, desc, color in TIERS:
         if avg < limit:
-            return name, desc
-    return TIERS[-1][1], TIERS[-1][2]
+            return name, desc, color
+    return TIERS[-1][1], TIERS[-1][2], TIERS[-1][3]
 
 
 def _con():
@@ -102,7 +102,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
     five = [r for r in coll if rarity_of(r) == 5 and playable(r)]
     four = [r for r in coll if rarity_of(r) == 4 and playable(r)]
     avg = draws / max(len(five), 1)
-    tier, desc = _rating(avg)
+    tier, desc, tier_color = _rating(avg)
 
     # 五星网格：限定/常驻简单用是否在常驻卡池近似不了，先按职阶+宝具等级排
     grid = []
@@ -208,6 +208,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "avg": avg,
         "tier": tier,
         "tier_desc": desc,
+        "tier_color": tier_color,
         "grid": grid,
         "grid_year": recent,
         "year": year,
@@ -233,6 +234,7 @@ def card_html(model: dict) -> str:
         for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph"><span class="pn">{esc(p["name"][:30])}</span>'
+        f'<span class="pt">{p["time"]}</span>'
         f'<span class="pd">{p["draws"]:,} 抽</span>'
         f'<span class="pc">五星 {p["five"]}</span></div>'
         + ('<div class="pf">' + "".join(
@@ -258,6 +260,7 @@ def card_html(model: dict) -> str:
         "RATE_W": f"{min(100, max(6, 3000 / max(model['avg'], 1))):.0f}",
         "TIER": esc(model["tier"]),
         "TIER_DESC": esc(model["tier_desc"]),
+        "TIER_COLOR": model["tier_color"],
         "GRID": cells or '<div class="empty">今年还没有五星记录</div>',
         "GRID_N": str(len(model["grid_year"])),
         "GRID_TOTAL": str(model["grid_total"]),
