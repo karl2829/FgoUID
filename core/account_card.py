@@ -24,20 +24,21 @@ TEMPLATE = PKG / "templates" / "account_card.html"
 FACE = "https://static.atlasacademy.io/CN/Faces/f_{}0.png"
 
 # 欧非评级（FGO 化）
+# 出货率（五星 / 石抽）相对官方 1% 的比值 → 评级
 TIERS = (
-    (50, "冠位欧皇", "冠位指定级别的运气，人理都在为你让路。", "#FFE9A8"),
-    (70, "异闻带欧皇", "在错误的概率里活成了正确的样子。", "#F7E7B6"),
-    (90, "迦勒底欧皇", "被抑止力眷顾的御主。", "#EFD58C"),
-    (110, "人理守护者", "标准出率，稳如人理定础。", "#D8E3F0"),
-    (150, "平稳保底", "不欧不非，圣晶石按计划燃烧。", "#B7C2D2"),
-    (200, "迦勒底非酋", "每次出金都要先打一场圣杯战争。", "#F0A87C"),
-    (10**9, "终局非酋", "抽卡记录已被编入异闻带。", "#EE8A8A"),
+    (1.40, "冠位欧皇", "冠位指定级别的运气，人理都在为你让路。", "#FFE9A8"),
+    (1.20, "异闻带欧皇", "在错误的概率里活成了正确的样子。", "#F7E7B6"),
+    (1.05, "迦勒底欧皇", "被抑止力眷顾的御主。", "#EFD58C"),
+    (0.95, "人理守护者", "标准出率，稳如人理定础。", "#D8E3F0"),
+    (0.85, "平稳保底", "不欧不非，圣晶石按计划燃烧。", "#B7C2D2"),
+    (0.70, "迦勒底非酋", "每次出金都要先打一场圣杯战争。", "#F0A87C"),
+    (0.0, "终局非酋", "抽卡记录已被编入异闻带。", "#EE8A8A"),
 )
 
 
-def _rating(avg: float) -> tuple[str, str, str]:
+def _rating(ratio: float) -> tuple[str, str, str]:
     for limit, name, desc, color in TIERS:
-        if avg < limit:
+        if ratio >= limit:
             return name, desc, color
     return TIERS[-1][1], TIERS[-1][2], TIERS[-1][3]
 
@@ -106,8 +107,19 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
 
     five = [r for r in coll if rarity_of(r) == 5 and playable(r)]
     four = [r for r in coll if rarity_of(r) == 4 and playable(r)]
-    avg = draws / max(len(five), 1)
-    tier, desc, tier_color = _rating(avg)
+    bag_draws = totals["chargeStone"]           # 福袋抽数
+    stone_draws = totals["stone"]               # 圣晶石池抽数
+    total_draws = bag_draws + stone_draws
+    # 福袋一次 10 连（必出 1 五星）；2020-08 后国服改 11 连，按 11 计
+    bag_times = bag_draws / 11.0
+    bag_five = bag_times                       # 每个福袋 ≈ 1 个五星
+    coll_five = sum(max(int(r.get("totalGetNum") or 0), int(r.get("getNum") or 0), 1)
+                    for r in five)             # 累计获得的五星（含重复）
+    pure_five = max(coll_five - bag_five, 1)   # 扣除福袋后的五星
+    avg = stone_draws / pure_five              # 平均每五星（石抽口径）
+    rate = (pure_five / stone_draws * 100) if stone_draws else 0.0
+    ratio = rate / 1.0                         # 相对官方 1%
+    tier, desc, tier_color = _rating(ratio)
 
     # 五星网格：限定/常驻简单用是否在常驻卡池近似不了，先按职阶+宝具等级排
     owned_ids = {int(r["svtId"]) for r in (rep.get("userSvt") or [])}
@@ -220,6 +232,11 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
                 continue
             faces.append({"face": f"face_{sid}.png", "face_url": FACE.format(sid),
                           "name": meta.get("name", ""), "rarity": rar})
+        four_n = 0
+        for r in cards:
+            sid = int(r["objectId"])
+            if int((svt.get(sid) or {}).get("rarity") or 0) == 4:
+                four_n += 1
         kind = "福袋" if g.get("gacha_type") == "chargeStone" else (
             "常驻" if "剧情" in (g.get("name") or "") or "常驻" in (g.get("name") or "") else "限定")
         pools.append({
@@ -229,6 +246,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "draws": gacha_num.get(int(gid), 0),
             "records": len(cards),
             "five": five_n,
+            "four": four_n,
             "time": (datetime.fromtimestamp(max(ts)).strftime("%m-%d") if ts else ""),
             "last_ts": max(ts) if ts else 0,
         })
@@ -243,8 +261,14 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "start": datetime.fromtimestamp(int(ug.get("createdAt") or 0)).strftime("%Y-%m-%d"),
         "login_days": int(login_row.get("totalLoginCount") or 0),
         "friend_code": ug.get("friendCode", ""),
-        "draws": draws,
-        "bag_draws": totals["chargeStone"],
+        "draws": total_draws,
+        "stone_draws": stone_draws,
+        "bag_draws": bag_draws,
+        "bag_times": bag_times,
+        "bag_five": bag_five,
+        "coll_five": coll_five,
+        "rate": rate,
+        "ratio": ratio,
         "five": len(five),
         "five_owned": len(grid),
         "four": len(four),
@@ -274,13 +298,14 @@ def card_html(model: dict) -> str:
     cells = "".join(
         f'<div class="cell"><img src="../assets/{g["face"]}">'
         ''
-        + (f'<span class="cnt">×{g["count"]}</span>' if g["count"] > 1 else '')
+        + f'<span class="cnt">×{g["count"]}</span>' 
         + ('' if g.get("owned", True) else '<span class="gone">已变还</span>') + '</div>'
         for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph">'
         f'<span class="tag">{p["kind"]}</span>'
         f'<span class="pn">{esc(p["name"][:26])}</span>'
+        f'<span class="stars">五星 {p["five"]} · 四星 {p["four"]}</span>'
         f'<span class="pt">{p["time"]}</span>'
         f'<span class="pd">{p["draws"]:,} 抽</span></div>'
         + ('<div class="pf">' + "".join(
@@ -306,7 +331,14 @@ def card_html(model: dict) -> str:
         "FIVE_COLL": str(model["five"]),
         "FOUR": str(model["four"]),
         "AVG": f"{model['avg']:.1f}",
-        "RATE_W": f"{min(100, max(6, 3000 / max(model['avg'], 1))):.0f}",
+        "RATE_W": f"{min(100, max(4, model['ratio'] / 1.6 * 100)):.0f}",
+        "RATE": f"{model['rate']:.2f}",
+        "RATIO": f"{model['ratio']:.2f}",
+        "STONE_DRAWS": f"{model['stone_draws']:,}",
+        "BAG_TIMES": f"{model['bag_times']:.1f}",
+        "BAG_FIVE": f"{model['bag_five']:.1f}",
+        "COLL_FIVE": str(model['coll_five']),
+        "FIVE_KIND": str(model["five"]),
         "TIER": esc(model["tier"]),
         "TIER_DESC": esc(model["tier_desc"]),
         "TIER_COLOR": model["tier_color"],
