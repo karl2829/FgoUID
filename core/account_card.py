@@ -66,7 +66,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             return {int(r["id"]): dict(r) for r in con.execute(sql)}
 
         # 只取国服行（同 id 有 CN/JP 两份）
-        svt = by_id("SELECT id, name, rarity, servant_class FROM servants WHERE region='CN'")
+        svt = by_id("SELECT id, name, rarity, servant_class, cost, gacha FROM servants WHERE region='CN'")
         cno = {}
         try:
             import zlib
@@ -106,14 +106,22 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         cls = str(svt.get(int(r["svtId"]), {}).get("servant_class") or "").lower()
         return cls and not any(k in cls for k in BEAST)
 
+    def obtainable(r) -> bool:
+        """能抽到的从者：排除 enemyCollectionDetail（所罗门/提亚马特/盖提亚等 NPC 兽）。"""
+        try:
+            meta = svt.get(int(r["svtId"])) or {}
+        except (TypeError, ValueError):
+            return False
+        return bool(meta) and meta.get("gacha") != "enemyCollectionDetail"
+
     def rarity_of(r) -> int:
         try:
             return int(svt.get(int(r["svtId"]), {}).get("rarity") or 0)
         except (TypeError, ValueError):
             return 0
 
-    five = [r for r in coll if rarity_of(r) == 5]
-    four = [r for r in coll if rarity_of(r) == 4]
+    five = [r for r in coll if rarity_of(r) == 5 and obtainable(r)]
+    four = [r for r in coll if rarity_of(r) == 4 and obtainable(r)]
     bag_draws = totals["chargeStone"]           # 福袋抽数
     stone_draws = totals["stone"]               # 圣晶石池抽数
     total_draws = bag_draws + stone_draws
@@ -378,7 +386,7 @@ def card_html(model: dict) -> str:
     cells = "".join(_cell(g) for g in model["grid_year"])
     pool_rows = "".join(
         f'<div class="pb"><div class="ph">'
-        f'<span class="tag">{p["kind"]}</span>'
+        f'<span class="tag {"c" if p["kind"] == "常驻" else ("f" if p["kind"] == "福袋" else "")}">{p["kind"]}</span>'
         f'<span class="pn">{esc(p["name"][:26])}</span>'
         f'<span class="pd">{p["draws"]:,} 抽</span>'
         f'<span class="stars">五星 {p["five"]} · 四星 {p["four"]}</span>'

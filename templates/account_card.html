@@ -70,12 +70,12 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 .ratecard .v s{font-size:20px;text-decoration:none;color:var(--gold);margin-left:2px}
 .ratecard .sub{font-size:13px;color:#C9D5E5}
 .sum{flex:1 1 auto;display:flex;gap:8px}
-.sum .m{flex:1 1 0;min-width:0;padding:11px 12px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;
-  background:linear-gradient(180deg,#1B2A45,#16223A);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 2px 10px rgba(0,0,0,.28)}
-.sum .m b{display:block;font-weight:400;font-size:23px;color:#E8DCC0;line-height:1.12;white-space:nowrap}
-.sum .m b s{font-size:12.5px;color:#8FA0B6;text-decoration:none;margin-left:2px}
-.sum .m i{display:block;font-style:normal;font-size:12px;color:#B9C7DA;margin-top:6px;letter-spacing:.02em}
+.sum .m{flex:1 1 0;min-width:0;padding:12px 14px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(180deg,#22345A,#1A2A46);
+  box-shadow:inset 0 0 0 1px rgba(201,162,39,.28), inset 0 1px 0 rgba(255,255,255,.09)}
+.sum .m b{display:block;font-weight:400;font-size:26px;color:var(--num);line-height:1.12;white-space:nowrap}
+.sum .m b s{font-size:13px;color:#C2CFE0;text-decoration:none;margin-left:2px}
+.sum .m i{display:block;font-style:normal;font-size:12.5px;color:#D7E1EE;margin-top:6px;letter-spacing:.02em}
 .tier{flex:0 0 236px;padding:14px 16px;border-radius:14px;display:flex;flex-direction:column;justify-content:center;gap:7px;
   background:linear-gradient(180deg,#22345A,#1A2A46);box-shadow:inset 0 0 0 1px rgba(201,162,39,.5)}
 .tier .t{font-size:31px;color:{{TIER_COLOR}};letter-spacing:.06em;line-height:1.1}
@@ -92,8 +92,6 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
   background:linear-gradient(180deg,#F8EDCB,#C9A227);padding:0 6px;border-radius:5px;line-height:1.55;z-index:3}
 .cell .got{position:absolute;left:0;right:0;bottom:0;font-size:13px;text-align:center;
   color:var(--gold-hi);background:rgba(8,13,21,.78);line-height:1.7;letter-spacing:.02em}
-.yeardraws{margin:10px var(--pad-x) 0;font-size:13px;color:#C9D5E5}
-.yeardraws b{color:var(--num);font-weight:400}
 .hint{margin:6px var(--pad-x) 0;font-size:12.5px;color:#9FAEC2}
 .hint b{color:var(--gold);font-weight:400}
 
@@ -172,7 +170,6 @@ body{padding:36px;background:#080d15;font-family:"WenQuanYi Zen Hei","WenQuanYi 
 <div class="sec-h"><div class="bar"></div><div class="t">{{YEAR}} 记录</div>
   <div class="line"></div><div class="n">获得 {{GRID_N}} / 图鉴 {{GRID_ALL}}</div></div>
 <div class="grid">{{GRID}}</div>
-<div class="yeardraws">已统计卡池合计 <b>{{POOL_DRAWS}}</b> 抽</div>
 <div class="hint">角色对应抽数为估算数据，不一定准确（取该角色 UP 卡池累计抽数）· 全部记录请用 <b>fgo全部抽卡记录</b></div>
 
 <div class="sec-h"><div class="bar"></div><div class="t">近期卡池</div>
