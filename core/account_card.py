@@ -165,6 +165,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
     pools = []
     for gid, rows in histories.items():
         g = gtype.get(int(gid), {})
+        if g.get("gacha_type") == "friendPoint":      # 友情池不展示
+            continue
         cards = [r for r in rows if r.get("giftType") == 1]
         five_n = 0
         for r in cards:
@@ -183,9 +185,10 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
             "draws": gacha_num.get(int(gid), 0),
             "records": len(cards),
             "five": five_n,
-            "time": (datetime.fromtimestamp(min(ts)).strftime("%m-%d") if ts else ""),
+            "time": (datetime.fromtimestamp(max(ts)).strftime("%m-%d") if ts else ""),
+            "last_ts": max(ts) if ts else 0,
         })
-    pools.sort(key=lambda p: -p["records"])
+    pools.sort(key=lambda p: -p["last_ts"])
     events.sort(key=lambda e: -e["ts"])
     for e in events:
         e["time"] = datetime.fromtimestamp(e["ts"]).strftime("%m-%d %H:%M")
@@ -203,7 +206,7 @@ def card_model(rep: dict, histories: dict[str, list[dict]]) -> dict:
         "tier_desc": desc,
         "grid": grid,
         "push": push,
-        "pools": pools[:8],
+        "pools": pools[:10],
         "events": events[:40],
     }
 
