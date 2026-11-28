@@ -929,14 +929,14 @@ async def fgo_summon_record_all(bot: Bot, ev: Event):
 
 async def _send_summon_card(bot: Bot, ev: Event, mode: str = "year"):
     from .core import profile_store
-    from .core.account_card import get_card_png, model_for
+    from .core.account_card import get_card_png, model_for, reconcile
 
     uid = profile_store.uid_of(ev.user_id)
     if not uid:
         return await bot.send(
             "还没有你的账号数据。\n"
             "使用 fgo登录 扫码授权后即可生成抽卡记录卡。")
-    model = userprofile_load(uid, mode)
+    model = reconcile(userprofile_load(uid, mode))
     if not model:
         return await bot.send("账号数据读取失败，请重新 fgo登录。")
     if not image_on(ev):

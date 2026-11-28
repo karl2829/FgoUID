@@ -81,6 +81,9 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
             cno = {}
         ce = by_id("SELECT id, name, rarity FROM craft_essences WHERE region='CN'")
         gtype = by_id("SELECT id, name, gacha_type, started_at, ended_at FROM gacha_names")
+        total_five = con.execute(
+            "SELECT COUNT(*) FROM servants WHERE region='CN' AND rarity=5"
+            " AND (gacha IS NULL OR gacha <> 'enemyCollectionDetail')").fetchone()[0]
         try:
             featured_map = {int(r[0]): json.loads(r[1] or "[]") for r in con.execute(
                 "SELECT id, featured FROM gacha_names WHERE featured IS NOT NULL AND featured NOT IN ('[]','')")}
@@ -365,7 +368,8 @@ def card_model(rep: dict, histories: dict[str, list[dict]], mode: str = "year") 
         "coll_five": coll_five,
         "rate": rate,
         "ratio": ratio,
-        "five": len(five),
+        "five": int(total_five or len(five)),   # 图鉴分母：国服可获得五星总数
+        "five_collection": len(five),           # 该玩家图鉴里出现过的
         "five_owned": len(grid),
         "four": len(four),
         "avg": avg,
@@ -404,6 +408,25 @@ def _nick_html(name: str) -> str:
     esc = _html.escape
     m = re.match(r"^\[[a-zA-Z]\](.*)$", name or "")
     return esc(m.group(1) if m else (name or ""))
+
+
+def reconcile(model: dict) -> dict:
+    """给旧汇总档补齐「固定口径」字段（图鉴分母），避免必须重新同步。"""
+    if not model:
+        return model
+    try:
+        con = _con()
+        try:
+            total = con.execute(
+                "SELECT COUNT(*) FROM servants WHERE region='CN' AND rarity=5"
+                " AND (gacha IS NULL OR gacha <> 'enemyCollectionDetail')").fetchone()[0]
+        finally:
+            con.close()
+        if total:
+            model["five"] = int(total)
+    except sqlite3.Error:
+        pass
+    return model
 
 
 def model_for(uid: int | str) -> dict:
@@ -473,6 +496,9 @@ def card_html(model: dict) -> str:
         "GRID": cells or '<div class="empty">今年还没有五星记录</div>',
         "GRID_N": str(len(model["grid_year"])),
         "GRID_ALL": str(model.get("year_all", 0)),
+        "GRID_NOTE": (f'{len(model["grid_year"])} 骑'
+                      if model.get("mode") == "all"
+                      else f'获得 {len(model["grid_year"])} / 图鉴 {model.get("year_all", 0)}'),
         "GRID_TOTAL": str(model["grid_total"]),
         "POOL_DRAWS": f"{model['pool_draws']:,}",
         "YEAR": str(model["year"]),
